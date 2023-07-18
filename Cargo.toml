@@ -1,0 +1,9 @@
+[package]
+name = "rlox"
+description = "Rust-based implementation of the first lox language interpreter from the book 'Crafting Interpreters'"
+authors = ["Jens Siebert"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.3", features = ["derive"] }
