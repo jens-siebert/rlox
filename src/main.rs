@@ -1,5 +1,4 @@
 use std::fs;
-
 use clap::Parser;
 use thiserror::Error;
 
@@ -30,9 +29,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
-    let script_content = fs::read_to_string(script_file).unwrap();
+    let script_content = fs::read_to_string(script_file)?;
+
     let mut scanner = Scanner::new(script_content);
-    let _tokens = scanner.scan_tokens()?;
+    let tokens = match scanner.scan_tokens() {
+        Ok(tokens) => Ok(tokens),
+        Err(error) => {
+            eprintln!("{}", error.to_string());
+            Err(error)
+        }
+    }?;
+
+    println!("{:#?}", tokens);
 
     Ok(())
 }
