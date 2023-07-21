@@ -1,4 +1,11 @@
+use std::fs;
+
 use clap::Parser;
+use thiserror::Error;
+
+use crate::scanner::Scanner;
+
+mod scanner;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -7,6 +14,25 @@ struct Args {
     script: Option<String>
 }
 
-fn main() {
-    let _args = Args::parse();
+#[derive(Error, Debug)]
+enum LoxError {
+    #[error("No script file was given!")]
+    NoScriptFile
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
+    match args.script {
+        Some(script_file) => run(script_file),
+        None => Err(Box::new(LoxError::NoScriptFile))
+    }
+}
+
+fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
+    let script_content = fs::read_to_string(script_file).unwrap();
+    let mut scanner = Scanner::new(script_content);
+    let _tokens = scanner.scan_tokens()?;
+
+    Ok(())
 }
