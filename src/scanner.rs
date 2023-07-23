@@ -1,4 +1,5 @@
 use std::str::FromStr;
+
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -45,38 +46,34 @@ enum TokenType {
     Var,
     While,
 
-    Eof
+    Eof,
 }
 
 #[derive(Debug)]
-pub struct Token  {
+pub struct Token {
     token_type: TokenType,
     lexeme: String,
-    line: usize
+    line: usize,
 }
 
 impl Token {
     fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
-        Token { token_type, lexeme, line }
+        Token {
+            token_type,
+            lexeme,
+            line,
+        }
     }
 }
 
 #[derive(Error, Debug)]
 pub enum ScannerError {
     #[error("Unknown symbol {symbol:?} detected in line {line:?}!")]
-    UnknownSymbol {
-        symbol: char,
-        line: usize
-    },
+    UnknownSymbol { symbol: char, line: usize },
     #[error("Unterminated string in line {line:?}!")]
-    UnterminatedString{
-        line: usize
-    },
+    UnterminatedString { line: usize },
     #[error("Error while parsing number {number_string:?} in line {line:?}!")]
-    NumberParsingError {
-        number_string: String,
-        line: usize
-    }
+    NumberParsingError { number_string: String, line: usize },
 }
 
 pub struct Scanner {
@@ -84,12 +81,18 @@ pub struct Scanner {
     tokens: Vec<Token>,
     start_pos: usize,
     current_pos: usize,
-    current_line: usize
+    current_line: usize,
 }
 
 impl Scanner {
     pub fn new(input: String) -> Self {
-        Scanner { source: input.chars().collect(), tokens: vec![], start_pos: 0, current_pos: 0, current_line: 1 }
+        Scanner {
+            source: input.chars().collect(),
+            tokens: vec![],
+            start_pos: 0,
+            current_pos: 0,
+            current_line: 1,
+        }
     }
 
     pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, ScannerError> {
@@ -98,7 +101,11 @@ impl Scanner {
             self.scan_token()?;
         }
 
-        self.tokens.push(Token::new(TokenType::Eof, String::from(""), self.current_line));
+        self.tokens.push(Token::new(
+            TokenType::Eof,
+            String::from(""),
+            self.current_line,
+        ));
 
         Ok(&self.tokens)
     }
@@ -116,21 +123,37 @@ impl Scanner {
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
             '!' => {
-                let t = if self.match_char('=') { TokenType::BangEqual } else { TokenType::Bang };
+                let t = if self.match_char('=') {
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
                 self.add_token(t)
-            },
+            }
             '=' => {
-                let t = if self.match_char('=') { TokenType::EqualEqual } else { TokenType::Equal };
+                let t = if self.match_char('=') {
+                    TokenType::EqualEqual
+                } else {
+                    TokenType::Equal
+                };
                 self.add_token(t)
-            },
+            }
             '<' => {
-                let t = if self.match_char('=') { TokenType::LessEqual } else { TokenType::Less };
+                let t = if self.match_char('=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
                 self.add_token(t)
-            },
+            }
             '>' => {
-                let t = if self.match_char('=') { TokenType::GreaterEqual } else { TokenType::Greater };
+                let t = if self.match_char('=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
                 self.add_token(t)
-            },
+            }
             '/' => {
                 if self.match_char('/') {
                     while self.peek() != '\n' && !self.is_at_end() {
@@ -146,37 +169,58 @@ impl Scanner {
             '\n' => {
                 self.current_line += 1;
                 Ok(())
-            },
-            ' ' | '\r' | '\t' => { /* ignore whitespaces. */ Ok(()) },
+            }
+            ' ' | '\r' | '\t' => {
+                /* ignore whitespaces. */
+                Ok(())
+            }
             c => {
                 if c.is_ascii_digit() {
                     self.match_number()
                 } else if c.is_ascii_alphabetic() || c == '_' {
                     self.match_identifier()
                 } else {
-                    Err(ScannerError::UnknownSymbol { symbol: c, line: self.current_line})
+                    Err(ScannerError::UnknownSymbol {
+                        symbol: c,
+                        line: self.current_line,
+                    })
                 }
             }
         }
     }
 
     fn add_token(&mut self, token_type: TokenType) -> Result<(), ScannerError> {
-        let token_string: String = self.source[self.start_pos..self.current_pos].iter().collect();
-        self.tokens.push(Token::new(token_type, token_string, self.current_line));
+        let token_string: String = self.source[self.start_pos..self.current_pos]
+            .iter()
+            .collect();
+        self.tokens
+            .push(Token::new(token_type, token_string, self.current_line));
 
         Ok(())
     }
 
     fn add_string_token(&mut self, value: String) -> Result<(), ScannerError> {
-        let token_string: String = self.source[self.start_pos..self.current_pos].iter().collect();
-        self.tokens.push(Token::new(TokenType::String(value), token_string, self.current_line));
+        let token_string: String = self.source[self.start_pos..self.current_pos]
+            .iter()
+            .collect();
+        self.tokens.push(Token::new(
+            TokenType::String(value),
+            token_string,
+            self.current_line,
+        ));
 
         Ok(())
     }
 
     fn add_number_token(&mut self, value: f64) -> Result<(), ScannerError> {
-        let token_string: String = self.source[self.start_pos..self.current_pos].iter().collect();
-        self.tokens.push(Token::new(TokenType::Number(value), token_string, self.current_line));
+        let token_string: String = self.source[self.start_pos..self.current_pos]
+            .iter()
+            .collect();
+        self.tokens.push(Token::new(
+            TokenType::Number(value),
+            token_string,
+            self.current_line,
+        ));
 
         Ok(())
     }
@@ -203,11 +247,15 @@ impl Scanner {
         }
 
         if self.is_at_end() {
-            return Err(ScannerError::UnterminatedString { line: start_line })
+            return Err(ScannerError::UnterminatedString { line: start_line });
         }
 
         self.advance();
-        self.add_string_token(self.source[self.start_pos + 1..self.current_pos - 1].iter().collect())
+        self.add_string_token(
+            self.source[self.start_pos + 1..self.current_pos - 1]
+                .iter()
+                .collect(),
+        )
     }
 
     fn match_number(&mut self) -> Result<(), ScannerError> {
@@ -223,8 +271,15 @@ impl Scanner {
             self.advance();
         }
 
-        let number_string: String = self.source[self.start_pos..self.current_pos].iter().collect();
-        let number = f64::from_str(number_string.as_str()).map_err(|_| ScannerError::NumberParsingError { number_string, line: self.current_line })?;
+        let number_string: String = self.source[self.start_pos..self.current_pos]
+            .iter()
+            .collect();
+        let number = f64::from_str(number_string.as_str()).map_err(|_| {
+            ScannerError::NumberParsingError {
+                number_string,
+                line: self.current_line,
+            }
+        })?;
 
         self.add_number_token(number)
     }
@@ -239,7 +294,9 @@ impl Scanner {
             }
         }
 
-        let identifier_string: String = self.source[self.start_pos..self.current_pos].iter().collect();
+        let identifier_string: String = self.source[self.start_pos..self.current_pos]
+            .iter()
+            .collect();
 
         let t = match identifier_string.as_str() {
             "and" => TokenType::And,
@@ -258,7 +315,7 @@ impl Scanner {
             "true" => TokenType::True,
             "var" => TokenType::Var,
             "while" => TokenType::While,
-            _ => TokenType::Identifier
+            _ => TokenType::Identifier,
         };
 
         self.add_token(t)

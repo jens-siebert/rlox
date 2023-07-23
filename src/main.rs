@@ -1,4 +1,5 @@
 use std::fs;
+
 use clap::Parser;
 use thiserror::Error;
 
@@ -10,13 +11,13 @@ mod scanner;
 #[command(author, version, about)]
 struct Args {
     #[arg()]
-    script: Option<String>
+    script: Option<String>,
 }
 
 #[derive(Error, Debug)]
 enum LoxError {
     #[error("No script file was given!")]
-    NoScriptFile
+    NoScriptFile,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.script {
         Some(script_file) => run(script_file),
-        None => Err(Box::new(LoxError::NoScriptFile))
+        None => Err(Box::new(LoxError::NoScriptFile)),
     }
 }
 
@@ -35,7 +36,7 @@ fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
     let tokens = match scanner.scan_tokens() {
         Ok(tokens) => Ok(tokens),
         Err(error) => {
-            eprintln!("{}", error.to_string());
+            eprintln!("{}", error);
             Err(error)
         }
     }?;
