@@ -3,9 +3,7 @@ use std::fs;
 use clap::Parser;
 use thiserror::Error;
 
-use crate::scanner::Scanner;
-
-mod scanner;
+use rlox::scanner::Scanner;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
