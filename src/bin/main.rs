@@ -3,7 +3,7 @@ use std::fs;
 use clap::Parser;
 use thiserror::Error;
 
-use rlox::scanner::Scanner;
+use rlox::base::scanner::Scanner;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
