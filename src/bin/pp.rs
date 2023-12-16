@@ -1,4 +1,4 @@
-use rlox::base::parser::{Binary, Grouping, Literal, Unary, Expr, Visitor};
+use rlox::base::parser::{Binary, ExprRef, Grouping, Literal, Unary, Visitor};
 use rlox::base::scanner::{Token, TokenType};
 
 struct AstPrinter {}
@@ -8,11 +8,11 @@ impl AstPrinter {
         AstPrinter {}
     }
 
-    fn print(&self, expr: Box<dyn Expr>) -> String {
+    fn print(&self, expr: ExprRef) -> String {
         expr.accept(self)
     }
 
-    fn parenthesize(&self, name: &str, expressions: &[&Box<dyn Expr>]) -> String {
+    fn parenthesize(&self, name: &str, expressions: &[&ExprRef]) -> String {
         let mut result = String::new();
         result.push('(');
         result.push_str(name);
@@ -31,14 +31,14 @@ impl Visitor for AstPrinter {
         self.parenthesize(&expr.operator.lexeme, &[&expr.left, &expr.right])
     }
 
-    fn visit_grouping_expr(&self, expr: &Grouping) -> String{
+    fn visit_grouping_expr(&self, expr: &Grouping) -> String {
         self.parenthesize("group", &[&expr.expression])
     }
 
     fn visit_literal_expr(&self, expr: &Literal) -> String {
         match &expr.value {
             None => String::from("nil"),
-            Some(v) => v.to_string()
+            Some(v) => v.to_string(),
         }
     }
 
