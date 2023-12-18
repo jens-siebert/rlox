@@ -1,4 +1,4 @@
-use rlox::base::parser::{Binary, ExprRef, Grouping, Literal, Unary, Visitor};
+use rlox::base::parser::{Expr, ExprRef, Visitor};
 use rlox::base::scanner::{Token, TokenType};
 
 struct AstPrinter {}
@@ -26,35 +26,30 @@ impl AstPrinter {
     }
 }
 
-impl Visitor for AstPrinter {
-    fn visit_binary_expr(&self, expr: &Binary) -> String {
-        self.parenthesize(&expr.operator.lexeme, &[&expr.left, &expr.right])
-    }
-
-    fn visit_grouping_expr(&self, expr: &Grouping) -> String {
-        self.parenthesize("group", &[&expr.expression])
-    }
-
-    fn visit_literal_expr(&self, expr: &Literal) -> String {
-        match &expr.value {
-            None => String::from("nil"),
-            Some(v) => v.to_string(),
+impl Visitor<String> for AstPrinter {
+    fn visit(&self, expr: &Expr) -> String {
+        match expr {
+            Expr::Binary(left, operator, right) => {
+                self.parenthesize(&operator.lexeme, &[&left, &right])
+            }
+            Expr::Grouping(expression) => self.parenthesize("group", &[&expression]),
+            Expr::Literal(value) => match &value {
+                None => String::from("nil"),
+                Some(v) => v.to_string(),
+            },
+            Expr::Unary(operator, right) => self.parenthesize(&operator.lexeme, &[&right]),
         }
-    }
-
-    fn visit_unary_expr(&self, expr: &Unary) -> String {
-        self.parenthesize(&expr.operator.lexeme, &[&expr.right])
     }
 }
 
 fn main() {
-    let expression = Binary::new(
-        Unary::new(
+    let expression = Expr::binary(
+        Expr::unary(
             Token::new(TokenType::Minus, String::from("-"), 1),
-            Literal::new(Some(Box::new(123))),
+            Expr::literal(Some(Box::new(123))),
         ),
         Token::new(TokenType::Star, String::from("*"), 1),
-        Grouping::new(Literal::new(Some(Box::new(45.67)))),
+        Expr::grouping(Expr::literal(Some(Box::new(45.67)))),
     );
 
     let ast_printer = AstPrinter::new();
