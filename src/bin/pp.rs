@@ -43,13 +43,13 @@ impl Visitor<String> for AstPrinter {
 }
 
 fn main() {
-    let expression = Expr::binary(
-        Expr::unary(
-            Token::new(TokenType::Minus, String::from("-"), 1),
-            Expr::literal(Some(Box::new(123))),
+    let expression = Expr::binary_ref(
+        Expr::unary_ref(
+            Token::new_ref(TokenType::Minus, String::from("-"), 1),
+            Expr::literal_ref(Some(Box::new(123))),
         ),
-        Token::new(TokenType::Star, String::from("*"), 1),
-        Expr::grouping(Expr::literal(Some(Box::new(45.67)))),
+        Token::new_ref(TokenType::Star, String::from("*"), 1),
+        Expr::grouping_ref(Expr::literal_ref(Some(Box::new(45.67)))),
     );
 
     let ast_printer = AstPrinter::new();

@@ -56,6 +56,8 @@ pub struct Token {
     line: usize,
 }
 
+pub type TokenRef = Box<Token>;
+
 impl Token {
     pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
         Token {
@@ -63,6 +65,10 @@ impl Token {
             lexeme,
             line,
         }
+    }
+
+    pub fn new_ref(token_type: TokenType, lexeme: String, line: usize) -> TokenRef {
+        Box::new(Token::new(token_type, lexeme, line))
     }
 }
 
