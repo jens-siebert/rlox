@@ -5,17 +5,17 @@ pub trait Visitor<R> {
 }
 
 pub enum Expr {
-    Binary(ExprRef, TokenRef, ExprRef),
-    Grouping(ExprRef),
-    Literal(Option<Box<dyn ToString>>),
-    Unary(TokenRef, ExprRef),
+    Binary { left: ExprRef, operator: TokenRef, right: ExprRef },
+    Grouping { expression: ExprRef },
+    Literal { value: Option<Box<dyn ToString>> },
+    Unary { operator: TokenRef, right: ExprRef },
 }
 
 pub type ExprRef = Box<Expr>;
 
 impl Expr {
     pub fn binary(left: ExprRef, operator: TokenRef, right: ExprRef) -> Expr {
-        Expr::Binary(left, operator, right)
+        Expr::Binary { left, operator, right }
     }
 
     pub fn binary_ref(left: ExprRef, operator: TokenRef, right: ExprRef) -> ExprRef {
@@ -23,7 +23,7 @@ impl Expr {
     }
 
     pub fn grouping(expression: ExprRef) -> Expr {
-        Expr::Grouping(expression)
+        Expr::Grouping { expression }
     }
 
     pub fn grouping_ref(expression: ExprRef) -> ExprRef {
@@ -31,7 +31,7 @@ impl Expr {
     }
 
     pub fn literal(value: Option<Box<dyn ToString>>) -> Expr {
-        Expr::Literal(value)
+        Expr::Literal { value }
     }
 
     pub fn literal_ref(value: Option<Box<dyn ToString>>) -> ExprRef {
@@ -39,7 +39,7 @@ impl Expr {
     }
 
     pub fn unary(operator: TokenRef, right: ExprRef) -> Expr {
-        Expr::Unary(operator, right)
+        Expr::Unary { operator, right }
     }
 
     pub fn unary_ref(operator: TokenRef, right: ExprRef) -> ExprRef {

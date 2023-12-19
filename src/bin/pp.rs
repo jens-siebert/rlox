@@ -29,15 +29,15 @@ impl AstPrinter {
 impl Visitor<String> for AstPrinter {
     fn visit(&self, expr: &Expr) -> String {
         match expr {
-            Expr::Binary(left, operator, right) => {
+            Expr::Binary { left, operator, right } => {
                 self.parenthesize(&operator.lexeme, &[&left, &right])
             }
-            Expr::Grouping(expression) => self.parenthesize("group", &[&expression]),
-            Expr::Literal(value) => match &value {
+            Expr::Grouping { expression } => self.parenthesize("group", &[&expression]),
+            Expr::Literal { value } => match &value {
                 None => String::from("nil"),
                 Some(v) => v.to_string(),
             },
-            Expr::Unary(operator, right) => self.parenthesize(&operator.lexeme, &[&right]),
+            Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, &[&right]),
         }
     }
 }

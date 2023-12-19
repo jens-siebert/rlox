@@ -26,8 +26,8 @@ pub enum TokenType {
     LessEqual,
 
     Identifier,
-    String(String),
-    Number(f64),
+    String { value: String },
+    Number { value: f64 },
 
     And,
     Class,
@@ -210,7 +210,7 @@ impl Scanner {
             .iter()
             .collect();
         self.tokens.push(Token::new_ref(
-            TokenType::String(value),
+            TokenType::String { value },
             token_string,
             self.current_line,
         ));
@@ -223,7 +223,7 @@ impl Scanner {
             .iter()
             .collect();
         self.tokens.push(Token::new_ref(
-            TokenType::Number(value),
+            TokenType::Number { value },
             token_string,
             self.current_line,
         ));
