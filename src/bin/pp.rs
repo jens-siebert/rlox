@@ -27,7 +27,7 @@ impl AstPrinter {
 }
 
 impl Visitor<String> for AstPrinter {
-    fn visit(&self, expr: &Expr) -> String {
+    fn visit_expr(&self, expr: &Expr) -> String {
         match expr {
             Expr::Binary { left, operator, right } => {
                 self.parenthesize(&operator.lexeme, &[&left, &right])

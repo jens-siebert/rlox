@@ -1,7 +1,7 @@
 use crate::base::scanner::TokenRef;
 
 pub trait Visitor<R> {
-    fn visit(&self, expr: &Expr) -> R;
+    fn visit_expr(&self, expr: &Expr) -> R;
 }
 
 pub enum Expr {
@@ -47,6 +47,6 @@ impl Expr {
     }
 
     pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
-        visitor.visit(self)
+        visitor.visit_expr(self)
     }
 }
