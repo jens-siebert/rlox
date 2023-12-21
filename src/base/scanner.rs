@@ -56,6 +56,8 @@ pub struct Token {
     pub line: usize,
 }
 
+pub type TokenRef = Box<Token>;
+
 impl Token {
     pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
         Token {
@@ -63,6 +65,10 @@ impl Token {
             lexeme,
             line,
         }
+    }
+
+    pub fn new_ref(token_type: TokenType, lexeme: String, line: usize) -> TokenRef {
+        Box::new(Token::new(token_type, lexeme, line))
     }
 }
 
@@ -78,7 +84,7 @@ pub enum ScannerError {
 
 pub struct Scanner {
     source: Vec<char>,
-    tokens: Vec<Token>,
+    tokens: Vec<TokenRef>,
     start_pos: usize,
     current_pos: usize,
     current_line: usize,
@@ -95,13 +101,13 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, ScannerError> {
+    pub fn scan_tokens(&mut self) -> Result<&Vec<TokenRef>, ScannerError> {
         while !self.is_at_end() {
             self.start_pos = self.current_pos;
             self.scan_token()?;
         }
 
-        self.tokens.push(Token::new(
+        self.tokens.push(Token::new_ref(
             TokenType::Eof,
             String::from(""),
             self.current_line,
@@ -194,7 +200,7 @@ impl Scanner {
             .iter()
             .collect();
         self.tokens
-            .push(Token::new(token_type, token_string, self.current_line));
+            .push(Token::new_ref(token_type, token_string, self.current_line));
 
         Ok(())
     }
@@ -203,7 +209,7 @@ impl Scanner {
         let token_string: String = self.source[self.start_pos..self.current_pos]
             .iter()
             .collect();
-        self.tokens.push(Token::new(
+        self.tokens.push(Token::new_ref(
             TokenType::String { value },
             token_string,
             self.current_line,
@@ -216,7 +222,7 @@ impl Scanner {
         let token_string: String = self.source[self.start_pos..self.current_pos]
             .iter()
             .collect();
-        self.tokens.push(Token::new(
+        self.tokens.push(Token::new_ref(
             TokenType::Number { value },
             token_string,
             self.current_line,

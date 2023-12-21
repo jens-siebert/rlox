@@ -1,31 +1,49 @@
-use crate::base::scanner::Token;
+use crate::base::scanner::TokenRef;
 
 pub trait Visitor<R> {
     fn visit_expr(&self, expr: &Expr) -> R;
 }
 
-pub enum Expr<'a> {
-    Binary { left: &'a Expr<'a>, operator: &'a Token, right: &'a Expr<'a> },
-    Grouping { expression: &'a Expr<'a> },
+pub enum Expr {
+    Binary { left: ExprRef, operator: TokenRef, right: ExprRef },
+    Grouping { expression: ExprRef },
     Literal { value: Option<Box<dyn ToString>> },
-    Unary { operator: &'a Token, right: &'a Expr<'a> },
+    Unary { operator: TokenRef, right: ExprRef },
 }
 
-impl Expr<'_> {
-    pub fn binary<'a>(left: &'a Expr, operator: &'a Token, right: &'a Expr) -> Expr<'a>{
+pub type ExprRef = Box<Expr>;
+
+impl Expr {
+    pub fn binary(left: ExprRef, operator: TokenRef, right: ExprRef) -> Expr {
         Expr::Binary { left, operator, right }
     }
 
-    pub fn grouping<'a>(expression: &'a Expr) -> Expr<'a> {
+    pub fn binary_ref(left: ExprRef, operator: TokenRef, right: ExprRef) -> ExprRef {
+        Box::new(Expr::binary(left, operator, right))
+    }
+
+    pub fn grouping(expression: ExprRef) -> Expr {
         Expr::Grouping { expression }
     }
 
-    pub fn literal<'a>(value: Option<Box<dyn ToString>>) -> Expr<'a> {
+    pub fn grouping_ref(expression: ExprRef) -> ExprRef {
+        Box::new(Expr::grouping(expression))
+    }
+
+    pub fn literal(value: Option<Box<dyn ToString>>) -> Expr {
         Expr::Literal { value }
     }
 
-    pub fn unary<'a>(operator: &'a Token, right: &'a Expr) -> Expr<'a> {
+    pub fn literal_ref(value: Option<Box<dyn ToString>>) -> ExprRef {
+        Box::new(Expr::literal(value))
+    }
+
+    pub fn unary(operator: TokenRef, right: ExprRef) -> Expr {
         Expr::Unary { operator, right }
+    }
+
+    pub fn unary_ref(operator: TokenRef, right: ExprRef) -> ExprRef {
+        Box::new(Expr::unary(operator, right))
     }
 
     pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {

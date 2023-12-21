@@ -1,4 +1,4 @@
-use rlox::base::parser::{Expr, Visitor};
+use rlox::base::parser::{Expr, ExprRef, Visitor};
 use rlox::base::scanner::{Token, TokenType};
 
 struct AstPrinter {}
@@ -8,11 +8,11 @@ impl AstPrinter {
         AstPrinter {}
     }
 
-    fn print(&self, expr: &Expr) -> String {
+    fn print(&self, expr: ExprRef) -> String {
         expr.accept(self)
     }
 
-    fn parenthesize(&self, name: &str, expressions: &[&Expr]) -> String {
+    fn parenthesize(&self, name: &str, expressions: &[&ExprRef]) -> String {
         let mut result = String::new();
         result.push('(');
         result.push_str(name);
@@ -43,13 +43,14 @@ impl Visitor<String> for AstPrinter {
 }
 
 fn main() {
-    let op_minus = &Token::new(TokenType::Minus, String::from("-"), 1);
-    let literal_1 = &Expr::literal(Some(Box::new(123)));
-    let unary = &Expr::unary(op_minus, literal_1);
-    let op_star = &Token::new(TokenType::Star, String::from("*"), 1);
-    let literal_2 = &Expr::literal(Some(Box::new(45.67)));
-    let group = &Expr::grouping(literal_2);
-    let expression = &Expr::binary(unary, op_star, group);
+    let expression = Expr::binary_ref(
+        Expr::unary_ref(
+            Token::new_ref(TokenType::Minus, String::from("-"), 1),
+            Expr::literal_ref(Some(Box::new(123))),
+        ),
+        Token::new_ref(TokenType::Star, String::from("*"), 1),
+        Expr::grouping_ref(Expr::literal_ref(Some(Box::new(45.67)))),
+    );
 
     let ast_printer = AstPrinter::new();
     println!("{}", ast_printer.print(expression));
