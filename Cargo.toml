@@ -8,9 +8,6 @@ edition = "2021"
 [[bin]]
 name = "rlox"
 
-[[bin]]
-name = "pp"
-
 [dependencies]
 clap = { version = "4.3", features = ["derive"] }
 thiserror = "1.0"
