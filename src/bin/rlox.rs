@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::fs;
 
 use clap::Parser as ClapParser;
-use thiserror::Error;
 use rlox::base::parser::{Expr, ExprRef, Parser, Visitor};
+use thiserror::Error;
 
 use rlox::base::scanner::Scanner;
 
@@ -48,9 +48,11 @@ impl AstPrinter {
 impl Visitor<String> for AstPrinter {
     fn visit_expr(&self, expr: &Expr) -> String {
         match expr {
-            Expr::Binary { left, operator, right } => {
-                self.parenthesize(&operator.lexeme, &[&left, &right])
-            }
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => self.parenthesize(&operator.lexeme, &[&left, &right]),
             Expr::Grouping { expression } => self.parenthesize("group", &[&expression]),
             Expr::Literal { value } => match &value {
                 None => String::from("nil"),
@@ -82,9 +84,12 @@ fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
         }
     }?;
 
-    let parser = Parser { tokens, current: RefCell::new(0) };
+    let parser = Parser {
+        tokens,
+        current: RefCell::new(0),
+    };
     let expression = match parser.parse() {
-        Ok(expression) => { Ok(expression) }
+        Ok(expression) => Ok(expression),
         Err(error) => {
             eprintln!("{}", error);
             Err(error)

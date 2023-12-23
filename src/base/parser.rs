@@ -173,11 +173,11 @@ impl Parser<'_> {
         match &self.peek()?.token_type {
             TokenType::Number { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(Some(Box::new(*value))))
-            },
+                return Ok(Expr::literal_ref(Some(Box::new(*value))));
+            }
             TokenType::String { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(Some(Box::new(value.clone()))))
+                return Ok(Expr::literal_ref(Some(Box::new(value.clone()))));
             }
             _ => {}
         }
