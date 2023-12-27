@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::fs;
+use std::io::Write;
 
 use clap::Parser as ClapParser;
 use rlox::base::parser::Parser;
-use thiserror::Error;
 
 use rlox::base::scanner::Scanner;
 use rlox::interpreter::interpreter::Interpreter;
@@ -15,25 +15,17 @@ struct Args {
     script: Option<String>,
 }
 
-#[derive(Error, Debug)]
-enum LoxError {
-    #[error("No script file was given!")]
-    NoScriptFile,
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     match args.script {
-        Some(script_file) => run(script_file),
-        None => Err(Box::new(LoxError::NoScriptFile)),
+        Some(script_file) => run_file(script_file),
+        None => run(),
     }
 }
 
-fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
-    let script_content = fs::read_to_string(script_file)?;
-
-    let mut scanner = Scanner::new(script_content);
+fn run_string(input: String) -> Result<(), Box<dyn std::error::Error>> {
+    let mut scanner = Scanner::new(input);
     let tokens = match scanner.scan_tokens() {
         Ok(tokens) => Ok(tokens),
         Err(error) => {
@@ -62,7 +54,27 @@ fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
         Err(error) => {
             eprintln!("{}", error);
         }
-    }
+    };
 
     Ok(())
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Lox interpreter...");
+    loop {
+        print!("> ");
+        let _ = std::io::stdout().flush();
+        let mut input = String::new();
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Unable to read user input!");
+
+        run_string(input)?;
+    }
+}
+
+fn run_file(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
+    let script_content = fs::read_to_string(script_file)?;
+
+    run_string(script_content)
 }
