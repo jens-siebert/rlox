@@ -4,19 +4,56 @@ use std::cell::RefCell;
 use std::fmt::Display;
 use thiserror::Error;
 
-pub enum LiteralValue<'a> {
-    Number { value: f64 },
-    String { value: &'a String },
-    Boolean { value: bool },
+#[derive(PartialEq)]
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+    Boolean(bool),
     None,
 }
 
-impl Display for LiteralValue<'_> {
+pub type LiteralValueRef = Box<LiteralValue>;
+
+impl LiteralValue {
+    pub fn number(value: f64) -> LiteralValue {
+        LiteralValue::Number(value)
+    }
+
+    pub fn number_ref(value: f64) -> LiteralValueRef {
+        Box::new(LiteralValue::number(value))
+    }
+
+    pub fn string(value: String) -> LiteralValue {
+        LiteralValue::String(value)
+    }
+
+    pub fn string_ref(value: String) -> LiteralValueRef {
+        Box::new(LiteralValue::string(value))
+    }
+
+    pub fn boolean(value: bool) -> LiteralValue {
+        LiteralValue::Boolean(value)
+    }
+
+    pub fn boolean_ref(value: bool) -> LiteralValueRef {
+        Box::new(LiteralValue::boolean(value))
+    }
+
+    pub fn none() -> LiteralValue {
+        LiteralValue::None
+    }
+
+    pub fn none_ref() -> LiteralValueRef {
+        Box::new(LiteralValue::none())
+    }
+}
+
+impl Display for LiteralValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let result = match self {
-            LiteralValue::Number { value } => value.to_string(),
-            LiteralValue::String { value } => value.to_string(),
-            LiteralValue::Boolean { value } => value.to_string(),
+            LiteralValue::Number(value) => value.to_string(),
+            LiteralValue::String(value) => value.to_string(),
+            LiteralValue::Boolean(value) => value.to_string(),
             LiteralValue::None => String::from("nil"),
         };
 
@@ -34,7 +71,7 @@ pub enum Expr<'a> {
         expression: ExprRef<'a>,
     },
     Literal {
-        value: LiteralValue<'a>,
+        value: LiteralValue,
     },
     Unary {
         operator: &'a Token,
@@ -69,11 +106,11 @@ impl Expr<'_> {
         Box::new(Expr::grouping(expression))
     }
 
-    pub fn literal(value: LiteralValue) -> Expr {
+    pub fn literal<'a>(value: LiteralValue) -> Expr<'a> {
         Expr::Literal { value }
     }
 
-    pub fn literal_ref(value: LiteralValue) -> ExprRef {
+    pub fn literal_ref<'a>(value: LiteralValue) -> ExprRef<'a> {
         Box::new(Expr::literal(value))
     }
 
@@ -179,10 +216,10 @@ impl Parser<'_> {
 
     fn primary(&self) -> Result<ExprRef, ParserError> {
         if self.match_token_types(&[TokenType::False])? {
-            return Ok(Expr::literal_ref(LiteralValue::Boolean { value: false }));
+            return Ok(Expr::literal_ref(LiteralValue::Boolean(false)));
         }
         if self.match_token_types(&[TokenType::True])? {
-            return Ok(Expr::literal_ref(LiteralValue::Boolean { value: true }));
+            return Ok(Expr::literal_ref(LiteralValue::Boolean(true)));
         }
         if self.match_token_types(&[TokenType::Nil])? {
             return Ok(Expr::literal_ref(LiteralValue::None));
@@ -191,11 +228,11 @@ impl Parser<'_> {
         match &self.peek()?.token_type {
             TokenType::Number { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(LiteralValue::Number { value: *value }));
+                return Ok(Expr::literal_ref(LiteralValue::Number(*value)));
             }
             TokenType::String { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(LiteralValue::String { value }));
+                return Ok(Expr::literal_ref(LiteralValue::String(value.clone())));
             }
             _ => {}
         }

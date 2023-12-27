@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::fs;
 
 use clap::Parser as ClapParser;
-use rlox::base::parser::{Expr, ExprRef, Parser};
-use rlox::base::visitor::{RuntimeError, Visitor};
+use rlox::base::parser::Parser;
 use thiserror::Error;
 
 use rlox::base::scanner::Scanner;
+use rlox::interpreter::interpreter::Interpreter;
 
 #[derive(ClapParser, Debug)]
 #[command(author, version, about)]
@@ -19,46 +19,6 @@ struct Args {
 enum LoxError {
     #[error("No script file was given!")]
     NoScriptFile,
-}
-
-struct AstPrinter {}
-
-impl AstPrinter {
-    fn new() -> Self {
-        AstPrinter {}
-    }
-
-    fn print(&self, expr: ExprRef) -> Result<String, RuntimeError> {
-        expr.accept(self)
-    }
-
-    fn parenthesize(&self, name: &str, expressions: &[&ExprRef]) -> Result<String, RuntimeError> {
-        let mut result = String::new();
-        result.push('(');
-        result.push_str(name);
-        for expr in expressions {
-            result.push(' ');
-            result.push_str(expr.accept(self)?.as_str());
-        }
-        result.push(')');
-
-        Ok(result)
-    }
-}
-
-impl Visitor<String> for AstPrinter {
-    fn visit_expr(&self, expr: &Expr) -> Result<String, RuntimeError> {
-        match expr {
-            Expr::Binary {
-                left,
-                operator,
-                right,
-            } => self.parenthesize(&operator.lexeme, &[&left, &right]),
-            Expr::Grouping { expression } => self.parenthesize("group", &[&expression]),
-            Expr::Literal { value } => Ok(value.to_string()),
-            Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, &[&right]),
-        }
-    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -94,8 +54,8 @@ fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
         }
     }?;
 
-    let ast_printer = AstPrinter::new();
-    match ast_printer.print(expression) {
+    let interpreter = Interpreter {};
+    match interpreter.evaluate(&expression) {
         Ok(result) => {
             println!("{}", result);
         }
