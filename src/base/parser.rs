@@ -1,10 +1,7 @@
 use crate::base::scanner::{Token, TokenType};
+use crate::base::visitor::{RuntimeError, Visitor};
 use std::cell::RefCell;
 use thiserror::Error;
-
-pub trait Visitor<R> {
-    fn visit_expr(&self, expr: &Expr) -> R;
-}
 
 pub enum Expr<'a> {
     Binary {
@@ -67,7 +64,7 @@ impl Expr<'_> {
         Box::new(Expr::unary(operator, right))
     }
 
-    pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> R {
+    pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> Result<R, RuntimeError> {
         visitor.visit_expr(self)
     }
 }

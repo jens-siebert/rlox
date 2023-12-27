@@ -2,7 +2,8 @@ use std::cell::RefCell;
 use std::fs;
 
 use clap::Parser as ClapParser;
-use rlox::base::parser::{Expr, ExprRef, Parser, Visitor};
+use rlox::base::parser::{Expr, ExprRef, Parser};
+use rlox::base::visitor::{RuntimeError, Visitor};
 use thiserror::Error;
 
 use rlox::base::scanner::Scanner;
@@ -27,26 +28,26 @@ impl AstPrinter {
         AstPrinter {}
     }
 
-    fn print(&self, expr: ExprRef) -> String {
+    fn print(&self, expr: ExprRef) -> Result<String, RuntimeError> {
         expr.accept(self)
     }
 
-    fn parenthesize(&self, name: &str, expressions: &[&ExprRef]) -> String {
+    fn parenthesize(&self, name: &str, expressions: &[&ExprRef]) -> Result<String, RuntimeError> {
         let mut result = String::new();
         result.push('(');
         result.push_str(name);
         for expr in expressions {
             result.push(' ');
-            result.push_str(expr.accept(self).as_str());
+            result.push_str(expr.accept(self)?.as_str());
         }
         result.push(')');
 
-        result
+        Ok(result)
     }
 }
 
 impl Visitor<String> for AstPrinter {
-    fn visit_expr(&self, expr: &Expr) -> String {
+    fn visit_expr(&self, expr: &Expr) -> Result<String, RuntimeError> {
         match expr {
             Expr::Binary {
                 left,
@@ -55,8 +56,8 @@ impl Visitor<String> for AstPrinter {
             } => self.parenthesize(&operator.lexeme, &[&left, &right]),
             Expr::Grouping { expression } => self.parenthesize("group", &[&expression]),
             Expr::Literal { value } => match &value {
-                None => String::from("nil"),
-                Some(v) => v.to_string(),
+                None => Ok(String::from("nil")),
+                Some(v) => Ok(v.to_string()),
             },
             Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, &[&right]),
         }
@@ -97,7 +98,14 @@ fn run(script_file: String) -> Result<(), Box<dyn std::error::Error>> {
     }?;
 
     let ast_printer = AstPrinter::new();
-    println!("{}", ast_printer.print(expression));
+    match ast_printer.print(expression) {
+        Ok(result) => {
+            println!("{}", result);
+        }
+        Err(error) => {
+            eprintln!("{}", error);
+        }
+    }
 
     Ok(())
 }
