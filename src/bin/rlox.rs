@@ -55,10 +55,7 @@ impl Visitor<String> for AstPrinter {
                 right,
             } => self.parenthesize(&operator.lexeme, &[&left, &right]),
             Expr::Grouping { expression } => self.parenthesize("group", &[&expression]),
-            Expr::Literal { value } => match &value {
-                None => Ok(String::from("nil")),
-                Some(v) => Ok(v.to_string()),
-            },
+            Expr::Literal { value } => Ok(value.to_string()),
             Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, &[&right]),
         }
     }

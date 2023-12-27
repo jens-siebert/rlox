@@ -1,7 +1,28 @@
 use crate::base::scanner::{Token, TokenType};
 use crate::base::visitor::{RuntimeError, Visitor};
 use std::cell::RefCell;
+use std::fmt::Display;
 use thiserror::Error;
+
+pub enum LiteralValue<'a> {
+    Number { value: f64 },
+    String { value: &'a String },
+    Boolean { value: bool },
+    None,
+}
+
+impl Display for LiteralValue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let result = match self {
+            LiteralValue::Number { value } => value.to_string(),
+            LiteralValue::String { value } => value.to_string(),
+            LiteralValue::Boolean { value } => value.to_string(),
+            LiteralValue::None => String::from("nil"),
+        };
+
+        write!(f, "{}", result)
+    }
+}
 
 pub enum Expr<'a> {
     Binary {
@@ -13,7 +34,7 @@ pub enum Expr<'a> {
         expression: ExprRef<'a>,
     },
     Literal {
-        value: Option<Box<dyn ToString>>,
+        value: LiteralValue<'a>,
     },
     Unary {
         operator: &'a Token,
@@ -48,11 +69,11 @@ impl Expr<'_> {
         Box::new(Expr::grouping(expression))
     }
 
-    pub fn literal<'a>(value: Option<Box<dyn ToString>>) -> Expr<'a> {
+    pub fn literal(value: LiteralValue) -> Expr {
         Expr::Literal { value }
     }
 
-    pub fn literal_ref<'a>(value: Option<Box<dyn ToString>>) -> ExprRef<'a> {
+    pub fn literal_ref(value: LiteralValue) -> ExprRef {
         Box::new(Expr::literal(value))
     }
 
@@ -158,23 +179,23 @@ impl Parser<'_> {
 
     fn primary(&self) -> Result<ExprRef, ParserError> {
         if self.match_token_types(&[TokenType::False])? {
-            return Ok(Expr::literal_ref(Some(Box::new(false))));
+            return Ok(Expr::literal_ref(LiteralValue::Boolean { value: false }));
         }
         if self.match_token_types(&[TokenType::True])? {
-            return Ok(Expr::literal_ref(Some(Box::new(true))));
+            return Ok(Expr::literal_ref(LiteralValue::Boolean { value: true }));
         }
         if self.match_token_types(&[TokenType::Nil])? {
-            return Ok(Expr::literal_ref(Some(Box::new("null"))));
+            return Ok(Expr::literal_ref(LiteralValue::None));
         }
 
         match &self.peek()?.token_type {
             TokenType::Number { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(Some(Box::new(*value))));
+                return Ok(Expr::literal_ref(LiteralValue::Number { value: *value }));
             }
             TokenType::String { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(Some(Box::new(value.clone()))));
+                return Ok(Expr::literal_ref(LiteralValue::String { value }));
             }
             _ => {}
         }
