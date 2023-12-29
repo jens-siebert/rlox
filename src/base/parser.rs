@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::fmt::Display;
 use thiserror::Error;
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum LiteralValue {
     Number(f64),
     String(String),
@@ -77,6 +77,9 @@ pub enum Expr<'a> {
         operator: &'a Token,
         right: ExprRef<'a>,
     },
+    Variable {
+        name: &'a Token,
+    },
 }
 
 pub type ExprRef<'a> = Box<Expr<'a>>;
@@ -118,6 +121,14 @@ impl<'a> Expr<'a> {
         Box::new(Expr::unary(operator, right))
     }
 
+    pub fn variable(name: &'a Token) -> Expr<'a> {
+        Expr::Variable { name }
+    }
+
+    pub fn variable_ref(name: &'a Token) -> ExprRef<'a> {
+        Box::new(Expr::variable(name))
+    }
+
     pub fn accept<R>(
         &self,
         visitor: &'a (dyn Visitor<Expr<'a>, R> + 'a),
@@ -127,8 +138,16 @@ impl<'a> Expr<'a> {
 }
 
 pub enum Stmt<'a> {
-    Expression { expression: ExprRef<'a> },
-    Print { expression: ExprRef<'a> },
+    Expression {
+        expression: ExprRef<'a>,
+    },
+    Print {
+        expression: ExprRef<'a>,
+    },
+    Var {
+        name: &'a Token,
+        initializer: ExprRef<'a>,
+    },
 }
 
 pub type StmtRef<'a> = Box<Stmt<'a>>;
@@ -150,6 +169,14 @@ impl<'a> Stmt<'a> {
         Box::new(Stmt::print(expression))
     }
 
+    pub fn var(name: &'a Token, initializer: ExprRef<'a>) -> Stmt<'a> {
+        Stmt::Var { name, initializer }
+    }
+
+    pub fn var_ref(name: &'a Token, initializer: ExprRef<'a>) -> StmtRef<'a> {
+        Box::new(Stmt::var(name, initializer))
+    }
+
     pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt<'a>, R>) -> Result<R, RuntimeError> {
         visitor.visit(self)
     }
@@ -167,6 +194,10 @@ pub enum ParserError {
     MissingSemicolonAfterValue,
     #[error("Expect ';' after expression.")]
     MissingSemicolonAfterExpression,
+    #[error("Expect ';' after variable declaration.")]
+    MissingSemicolonAfterVariableDeclaration,
+    #[error("Expect variable name.")]
+    MissingVariableName,
 }
 
 pub struct Parser<'a> {
@@ -179,10 +210,34 @@ impl Parser<'_> {
         let mut statements: Vec<StmtRef> = vec![];
 
         while !self.is_at_end()? {
-            statements.push(self.statement()?)
+            statements.push(self.declaration()?)
         }
 
         Ok(statements)
+    }
+
+    fn declaration(&self) -> Result<StmtRef, ParserError> {
+        if self.match_token_types(&[TokenType::Var])? {
+            self.variable_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn variable_declaration(&self) -> Result<StmtRef, ParserError> {
+        let name = self.consume(TokenType::Identifier, ParserError::MissingVariableName)?;
+        let initializer = if self.match_token_types(&[TokenType::Equal])? {
+            self.expression()?
+        } else {
+            Expr::literal_ref(LiteralValue::None)
+        };
+
+        self.consume(
+            TokenType::Semicolon,
+            ParserError::MissingSemicolonAfterVariableDeclaration,
+        )?;
+
+        Ok(Stmt::var_ref(name, initializer))
     }
 
     fn statement(&self) -> Result<StmtRef, ParserError> {
@@ -299,6 +354,10 @@ impl Parser<'_> {
                 return Ok(Expr::literal_ref(LiteralValue::String(value.clone())));
             }
             _ => {}
+        }
+
+        if self.match_token_types(&[TokenType::Identifier])? {
+            return Ok(Expr::variable_ref(self.previous()?));
         }
 
         if self.match_token_types(&[TokenType::LeftParen])? {

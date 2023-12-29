@@ -8,6 +8,8 @@ pub enum RuntimeError {
     NumberExpected,
     #[error("Number or String expected.")]
     NumberOrStringExpected,
+    #[error("Undefined variable.")]
+    UndefinedVariable,
 }
 
 pub trait Visitor<I, R> {

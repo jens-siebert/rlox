@@ -1,10 +1,20 @@
 use crate::base::parser::{Expr, ExprRef, LiteralValue, LiteralValueRef, Stmt, StmtRef};
 use crate::base::scanner::TokenType;
 use crate::base::visitor::{RuntimeError, Visitor};
+use std::cell::RefCell;
+use std::collections::HashMap;
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: RefCell<HashMap<String, LiteralValueRef>>,
+}
 
 impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter {
+            environment: RefCell::new(HashMap::new()),
+        }
+    }
+
     fn evaluate(&self, expr: &ExprRef) -> Result<LiteralValueRef, RuntimeError> {
         expr.accept(self)
     }
@@ -19,6 +29,12 @@ impl Interpreter {
                 eprintln!("{}", error);
             }
         }
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        Interpreter::new()
     }
 }
 
@@ -113,6 +129,10 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
+            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
+                None => Err(RuntimeError::UndefinedVariable),
+                Some(value) => Ok(value.clone()),
+            },
         }
     }
 }
@@ -127,6 +147,13 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
             Stmt::Print { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
+                Ok(())
+            }
+            Stmt::Var { name, initializer } => {
+                let value = self.evaluate(initializer)?;
+                self.environment
+                    .borrow_mut()
+                    .insert(name.lexeme.clone(), value);
                 Ok(())
             }
         }
