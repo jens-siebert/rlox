@@ -4,14 +4,46 @@ use crate::base::visitor::{RuntimeError, Visitor};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+struct Environment {
+    values: RefCell<HashMap<String, LiteralValueRef>>,
+}
+
+impl Environment {
+    fn new() -> Self {
+        Environment {
+            values: RefCell::new(HashMap::new()),
+        }
+    }
+
+    fn define(&self, name: &String, value: &LiteralValueRef) {
+        self.values.borrow_mut().insert(name.clone(), value.clone());
+    }
+
+    fn get(&self, name: &String) -> Result<LiteralValueRef, RuntimeError> {
+        match self.values.borrow().get(name) {
+            None => Err(RuntimeError::UndefinedVariable),
+            Some(value) => Ok(value.clone()),
+        }
+    }
+
+    fn assign(&self, name: &String, value: &LiteralValueRef) -> Result<(), RuntimeError> {
+        if self.values.borrow().contains_key(name) {
+            self.values.borrow_mut().insert(name.clone(), value.clone());
+            Ok(())
+        } else {
+            Err(RuntimeError::UndefinedVariable)
+        }
+    }
+}
+
 pub struct Interpreter {
-    environment: RefCell<HashMap<String, LiteralValueRef>>,
+    environment: Environment,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
-            environment: RefCell::new(HashMap::new()),
+            environment: Environment::new(),
         }
     }
 
@@ -129,20 +161,14 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
-            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
-                None => Err(RuntimeError::UndefinedVariable),
-                Some(value) => Ok(value.clone()),
+            Expr::Variable { name } => match self.environment.get(&name.lexeme) {
+                Ok(value) => Ok(value),
+                Err(_) => Err(RuntimeError::UndefinedVariable),
             },
             Expr::Assign { name, value } => {
                 let v = self.evaluate(value)?;
-                if self.environment.borrow().contains_key(&name.lexeme) {
-                    self.environment
-                        .borrow_mut()
-                        .insert(name.lexeme.clone(), v.clone());
-                    Ok(v)
-                } else {
-                    Err(RuntimeError::UndefinedVariable)
-                }
+                self.environment.assign(&name.lexeme, &v)?;
+                Ok(v)
             }
         }
     }
@@ -162,9 +188,7 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
-                self.environment
-                    .borrow_mut()
-                    .insert(name.lexeme.clone(), value);
+                self.environment.define(&name.lexeme, &value);
                 Ok(())
             }
         }
