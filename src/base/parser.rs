@@ -80,6 +80,10 @@ pub enum Expr<'a> {
     Variable {
         name: &'a Token,
     },
+    Assign {
+        name: &'a Token,
+        value: ExprRef<'a>,
+    },
 }
 
 pub type ExprRef<'a> = Box<Expr<'a>>;
@@ -127,6 +131,14 @@ impl<'a> Expr<'a> {
 
     pub fn variable_ref(name: &'a Token) -> ExprRef<'a> {
         Box::new(Expr::variable(name))
+    }
+
+    pub fn assign(name: &'a Token, value: ExprRef<'a>) -> Expr<'a> {
+        Expr::Assign { name, value }
+    }
+
+    pub fn assign_ref(name: &'a Token, value: ExprRef<'a>) -> ExprRef<'a> {
+        Box::new(Expr::assign(name, value))
     }
 
     pub fn accept<R>(
@@ -198,6 +210,8 @@ pub enum ParserError {
     MissingSemicolonAfterVariableDeclaration,
     #[error("Expect variable name.")]
     MissingVariableName,
+    #[error("Invalid assignment target.")]
+    InvalidAssignmentTarget,
 }
 
 pub struct Parser<'a> {
@@ -267,7 +281,22 @@ impl Parser<'_> {
     }
 
     fn expression(&self) -> Result<ExprRef, ParserError> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&self) -> Result<ExprRef, ParserError> {
+        let expr = self.equality()?;
+
+        if self.match_token_types(&[TokenType::Equal])? {
+            let value = self.assignment()?;
+
+            return match *expr {
+                Expr::Variable { name } => Ok(Expr::assign_ref(name, value)),
+                _ => Err(ParserError::InvalidAssignmentTarget),
+            };
+        }
+
+        Ok(expr)
     }
 
     fn equality(&self) -> Result<ExprRef, ParserError> {

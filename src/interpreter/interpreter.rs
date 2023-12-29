@@ -133,6 +133,17 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                 None => Err(RuntimeError::UndefinedVariable),
                 Some(value) => Ok(value.clone()),
             },
+            Expr::Assign { name, value } => {
+                let v = self.evaluate(value)?;
+                if self.environment.borrow().contains_key(&name.lexeme) {
+                    self.environment
+                        .borrow_mut()
+                        .insert(name.lexeme.clone(), v.clone());
+                    Ok(v)
+                } else {
+                    Err(RuntimeError::UndefinedVariable)
+                }
+            }
         }
     }
 }
