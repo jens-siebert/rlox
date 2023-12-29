@@ -1,18 +1,30 @@
-use crate::base::parser::{Expr, ExprRef, LiteralValue, LiteralValueRef};
+use crate::base::parser::{Expr, ExprRef, LiteralValue, LiteralValueRef, Stmt, StmtRef};
 use crate::base::scanner::TokenType;
 use crate::base::visitor::{RuntimeError, Visitor};
 
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn evaluate(&self, expr: &ExprRef) -> Result<LiteralValueRef, RuntimeError> {
+    fn evaluate(&self, expr: &ExprRef) -> Result<LiteralValueRef, RuntimeError> {
         expr.accept(self)
+    }
+
+    fn execute(&self, stmt: &StmtRef) -> Result<(), RuntimeError> {
+        stmt.accept(self)
+    }
+
+    pub fn interpret(&self, statements: Vec<StmtRef>) {
+        for statement in statements {
+            if let Err(error) = self.execute(&statement) {
+                eprintln!("{}", error);
+            }
+        }
     }
 }
 
-impl Visitor<LiteralValueRef> for Interpreter {
-    fn visit_expr(&self, expr: &Expr) -> Result<LiteralValueRef, RuntimeError> {
-        match expr {
+impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
+    fn visit(&self, input: &Expr<'_>) -> Result<LiteralValueRef, RuntimeError> {
+        match input {
             Expr::Binary {
                 left,
                 operator,
@@ -100,6 +112,22 @@ impl Visitor<LiteralValueRef> for Interpreter {
                     },
                     _ => Err(RuntimeError::InvalidValue),
                 }
+            }
+        }
+    }
+}
+
+impl Visitor<Stmt<'_>, ()> for Interpreter {
+    fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
+        match input {
+            Stmt::Expression { expression } => {
+                self.evaluate(expression)?;
+                Ok(())
+            }
+            Stmt::Print { expression } => {
+                let value = self.evaluate(expression)?;
+                println!("{}", value);
+                Ok(())
             }
         }
     }

@@ -38,8 +38,8 @@ fn run_string(input: String) -> Result<(), Box<dyn std::error::Error>> {
         tokens,
         current: RefCell::new(0),
     };
-    let expression = match parser.parse() {
-        Ok(expression) => Ok(expression),
+    let statements = match parser.parse() {
+        Ok(statements) => Ok(statements),
         Err(error) => {
             eprintln!("{}", error);
             Err(error)
@@ -47,14 +47,7 @@ fn run_string(input: String) -> Result<(), Box<dyn std::error::Error>> {
     }?;
 
     let interpreter = Interpreter {};
-    match interpreter.evaluate(&expression) {
-        Ok(result) => {
-            println!("{}", result);
-        }
-        Err(error) => {
-            eprintln!("{}", error);
-        }
-    };
+    interpreter.interpret(statements);
 
     Ok(())
 }

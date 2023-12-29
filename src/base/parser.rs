@@ -81,8 +81,8 @@ pub enum Expr<'a> {
 
 pub type ExprRef<'a> = Box<Expr<'a>>;
 
-impl Expr<'_> {
-    pub fn binary<'a>(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+impl<'a> Expr<'a> {
+    pub fn binary(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
         Expr::Binary {
             left,
             operator,
@@ -90,11 +90,7 @@ impl Expr<'_> {
         }
     }
 
-    pub fn binary_ref<'a>(
-        left: ExprRef<'a>,
-        operator: &'a Token,
-        right: ExprRef<'a>,
-    ) -> ExprRef<'a> {
+    pub fn binary_ref(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
         Box::new(Expr::binary(left, operator, right))
     }
 
@@ -106,24 +102,56 @@ impl Expr<'_> {
         Box::new(Expr::grouping(expression))
     }
 
-    pub fn literal<'a>(value: LiteralValue) -> Expr<'a> {
+    pub fn literal(value: LiteralValue) -> Expr<'a> {
         Expr::Literal { value }
     }
 
-    pub fn literal_ref<'a>(value: LiteralValue) -> ExprRef<'a> {
+    pub fn literal_ref(value: LiteralValue) -> ExprRef<'a> {
         Box::new(Expr::literal(value))
     }
 
-    pub fn unary<'a>(operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+    pub fn unary(operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
         Expr::Unary { operator, right }
     }
 
-    pub fn unary_ref<'a>(operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
+    pub fn unary_ref(operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
         Box::new(Expr::unary(operator, right))
     }
 
-    pub fn accept<R>(&self, visitor: &dyn Visitor<R>) -> Result<R, RuntimeError> {
-        visitor.visit_expr(self)
+    pub fn accept<R>(
+        &self,
+        visitor: &'a (dyn Visitor<Expr<'a>, R> + 'a),
+    ) -> Result<R, RuntimeError> {
+        visitor.visit(self)
+    }
+}
+
+pub enum Stmt<'a> {
+    Expression { expression: ExprRef<'a> },
+    Print { expression: ExprRef<'a> },
+}
+
+pub type StmtRef<'a> = Box<Stmt<'a>>;
+
+impl<'a> Stmt<'a> {
+    pub fn expression(expression: ExprRef) -> Stmt {
+        Stmt::Expression { expression }
+    }
+
+    pub fn expression_ref(expression: ExprRef) -> StmtRef {
+        Box::new(Stmt::expression(expression))
+    }
+
+    pub fn print(expression: ExprRef) -> Stmt {
+        Stmt::Print { expression }
+    }
+
+    pub fn print_ref(expression: ExprRef) -> StmtRef {
+        Box::new(Stmt::print(expression))
+    }
+
+    pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt<'a>, R>) -> Result<R, RuntimeError> {
+        visitor.visit(self)
     }
 }
 
@@ -135,6 +163,10 @@ pub enum ParserError {
     MissingExpression,
     #[error("Expect ')' after expression.")]
     MissingRightParenthesis,
+    #[error("Expect ';' after value.")]
+    MissingSemicolonAfterValue,
+    #[error("Expect ';' after expression.")]
+    MissingSemicolonAfterExpression,
 }
 
 pub struct Parser<'a> {
@@ -143,8 +175,40 @@ pub struct Parser<'a> {
 }
 
 impl Parser<'_> {
-    pub fn parse(&self) -> Result<ExprRef, ParserError> {
-        self.expression()
+    pub fn parse(&self) -> Result<Vec<StmtRef>, ParserError> {
+        let mut statements: Vec<StmtRef> = vec![];
+
+        while !self.is_at_end()? {
+            statements.push(self.statement()?)
+        }
+
+        Ok(statements)
+    }
+
+    fn statement(&self) -> Result<StmtRef, ParserError> {
+        if self.match_token_types(&[TokenType::Print])? {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&self) -> Result<StmtRef, ParserError> {
+        let value = self.expression()?;
+        self.consume(
+            TokenType::Semicolon,
+            ParserError::MissingSemicolonAfterValue,
+        )?;
+        Ok(Stmt::print_ref(value))
+    }
+
+    fn expression_statement(&self) -> Result<StmtRef, ParserError> {
+        let value = self.expression()?;
+        self.consume(
+            TokenType::Semicolon,
+            ParserError::MissingSemicolonAfterExpression,
+        )?;
+        Ok(Stmt::expression_ref(value))
     }
 
     fn expression(&self) -> Result<ExprRef, ParserError> {

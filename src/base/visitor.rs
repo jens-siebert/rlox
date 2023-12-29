@@ -1,4 +1,3 @@
-use crate::base::parser::Expr;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -11,6 +10,6 @@ pub enum RuntimeError {
     NumberOrStringExpected,
 }
 
-pub trait Visitor<R> {
-    fn visit_expr(&self, expr: &Expr) -> Result<R, RuntimeError>;
+pub trait Visitor<I, R> {
+    fn visit(&self, input: &I) -> Result<R, RuntimeError>;
 }
