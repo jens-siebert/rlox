@@ -5,23 +5,33 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 struct Environment {
+    enclosing: Option<EnvironmentRef>,
     values: RefCell<HashMap<String, LiteralValueRef>>,
 }
 
+type EnvironmentRef = Box<Environment>;
+
 impl Environment {
     fn new() -> Self {
+        Environment::new_with_local_scope(None)
+    }
+
+    fn new_with_local_scope(enclosing: Option<EnvironmentRef>) -> Self {
         Environment {
+            enclosing,
             values: RefCell::new(HashMap::new()),
         }
     }
-
     fn define(&self, name: &String, value: &LiteralValueRef) {
         self.values.borrow_mut().insert(name.clone(), value.clone());
     }
 
     fn get(&self, name: &String) -> Result<LiteralValueRef, RuntimeError> {
         match self.values.borrow().get(name) {
-            None => Err(RuntimeError::UndefinedVariable),
+            None => match &self.enclosing {
+                None => Err(RuntimeError::UndefinedVariable),
+                Some(scope) => scope.get(name),
+            },
             Some(value) => Ok(value.clone()),
         }
     }
@@ -31,7 +41,10 @@ impl Environment {
             self.values.borrow_mut().insert(name.clone(), value.clone());
             Ok(())
         } else {
-            Err(RuntimeError::UndefinedVariable)
+            match &self.enclosing {
+                None => Err(RuntimeError::UndefinedVariable),
+                Some(scope) => scope.assign(name, value),
+            }
         }
     }
 }
