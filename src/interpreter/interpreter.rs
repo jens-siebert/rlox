@@ -17,6 +17,14 @@ impl Interpreter {
         }
     }
 
+    fn is_truthy(&self, literal_value: &LiteralValueRef) -> bool {
+        match **literal_value {
+            LiteralValue::Boolean(value) => value,
+            LiteralValue::None => false,
+            _ => true,
+        }
+    }
+
     fn evaluate(&self, expr: &ExprRef) -> Result<LiteralValueRef, RuntimeError> {
         expr.accept(self)
     }
@@ -64,55 +72,55 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.evaluate(left);
-                let right = self.evaluate(right);
+                let left = self.evaluate(left)?;
+                let right = self.evaluate(right)?;
 
                 match &operator.token_type {
-                    TokenType::Greater => match (*left?, *right?) {
+                    TokenType::Greater => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::boolean_ref(v1 > v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::GreaterEqual => match (*left?, *right?) {
+                    TokenType::GreaterEqual => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::boolean_ref(v1 >= v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Less => match (*left?, *right?) {
+                    TokenType::Less => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::boolean_ref(v1 < v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::LessEqual => match (*left?, *right?) {
+                    TokenType::LessEqual => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::boolean_ref(v1 <= v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::BangEqual => Ok(LiteralValue::boolean_ref(*left? != *right?)),
-                    TokenType::EqualEqual => Ok(LiteralValue::boolean_ref(*left? == *right?)),
-                    TokenType::Minus => match (*left?, *right?) {
+                    TokenType::BangEqual => Ok(LiteralValue::boolean_ref(*left != *right)),
+                    TokenType::EqualEqual => Ok(LiteralValue::boolean_ref(*left == *right)),
+                    TokenType::Minus => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::number_ref(v1 - v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Slash => match (*left?, *right?) {
+                    TokenType::Slash => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::number_ref(v1 / v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Star => match (*left?, *right?) {
+                    TokenType::Star => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::number_ref(v1 * v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Plus => match (*left?, *right?) {
+                    TokenType::Plus => match (*left, *right) {
                         (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
                             Ok(LiteralValue::number_ref(v1 + v2))
                         }
@@ -131,19 +139,32 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                 LiteralValue::Boolean(value) => Ok(LiteralValue::boolean_ref(*value)),
                 LiteralValue::None => Ok(LiteralValue::none_ref()),
             },
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left_expr = self.evaluate(left)?;
+
+                if operator.token_type == TokenType::Or {
+                    if self.is_truthy(&left_expr) {
+                        return Ok(left_expr);
+                    }
+                } else if !self.is_truthy(&left_expr) {
+                    return Ok(left_expr);
+                }
+
+                self.evaluate(right)
+            }
             Expr::Unary { operator, right } => {
-                let right = self.evaluate(right);
+                let right = self.evaluate(right)?;
 
                 match &operator.token_type {
-                    TokenType::Minus => match *right? {
+                    TokenType::Minus => match *right {
                         LiteralValue::Number(value) => Ok(LiteralValue::number_ref(-value)),
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Bang => match *right? {
-                        LiteralValue::Boolean(value) => Ok(LiteralValue::boolean_ref(!value)),
-                        LiteralValue::None => Ok(LiteralValue::boolean_ref(true)),
-                        _ => Ok(LiteralValue::boolean_ref(false)),
-                    },
+                    TokenType::Bang => Ok(LiteralValue::boolean_ref(!self.is_truthy(&right))),
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
@@ -169,6 +190,24 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
             }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
+                Ok(())
+            }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition_result = self.evaluate(condition)?;
+
+                if self.is_truthy(&condition_result) {
+                    self.execute(then_branch)?
+                } else {
+                    match else_branch {
+                        None => {}
+                        Some(branch) => self.execute(branch)?,
+                    }
+                }
+
                 Ok(())
             }
             Stmt::Print { expression } => {

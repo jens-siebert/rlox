@@ -12,7 +12,11 @@ pub enum ParserError {
     #[error("Unknown token detected.")]
     MissingExpression,
     #[error("Expect ')' after expression.")]
-    MissingRightParenthesis,
+    MissingRightParenthesisAfterExpression,
+    #[error("Expect ')' after condition.")]
+    MissingRightParenthesisAfterCondition,
+    #[error("Expect '(' after 'if' statement.")]
+    MissingLeftParenthesisAfterIfStatement,
     #[error("Expect '}}' after block.")]
     MissingRightBrace,
     #[error("Expect ';' after value.")]
@@ -74,13 +78,37 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&self) -> Result<StmtRef, ParserError> {
-        if self.match_token_types(&[TokenType::Print])? {
+        if self.match_token_types(&[TokenType::If])? {
+            self.if_statement()
+        } else if self.match_token_types(&[TokenType::Print])? {
             self.print_statement()
         } else if self.match_token_types(&[TokenType::LeftBrace])? {
             self.block()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&self) -> Result<StmtRef, ParserError> {
+        self.consume(
+            TokenType::LeftParen,
+            ParserError::MissingLeftParenthesisAfterIfStatement,
+        )?;
+
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::RightParen,
+            ParserError::MissingRightParenthesisAfterCondition,
+        )?;
+
+        let then_branch = self.statement()?;
+        let else_branch = if self.match_token_types(&[TokenType::Else])? {
+            Some(self.statement()?)
+        } else {
+            None
+        };
+
+        Ok(Stmt::if_stmt_ref(condition, then_branch, else_branch))
     }
 
     fn print_statement(&self) -> Result<StmtRef, ParserError> {
@@ -118,7 +146,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&self) -> Result<ExprRef, ParserError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_token_types(&[TokenType::Equal])? {
             let value = self.assignment()?;
@@ -127,6 +155,30 @@ impl<'a> Parser<'a> {
                 Expr::Variable { name } => Ok(Expr::assign_ref(name, value)),
                 _ => Err(ParserError::InvalidAssignmentTarget),
             };
+        }
+
+        Ok(expr)
+    }
+
+    fn or(&self) -> Result<ExprRef, ParserError> {
+        let mut expr = self.and()?;
+
+        while self.match_token_types(&[TokenType::Or])? {
+            let operator = self.previous()?;
+            let right = self.and()?;
+            expr = Expr::logical_ref(expr, operator, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&self) -> Result<ExprRef, ParserError> {
+        let mut expr = self.equality()?;
+
+        while self.match_token_types(&[TokenType::And])? {
+            let operator = self.previous()?;
+            let right = self.equality()?;
+            expr = Expr::logical_ref(expr, operator, right);
         }
 
         Ok(expr)
@@ -224,7 +276,10 @@ impl<'a> Parser<'a> {
 
         if self.match_token_types(&[TokenType::LeftParen])? {
             let expr = self.expression()?;
-            self.consume(TokenType::RightParen, ParserError::MissingRightParenthesis)?;
+            self.consume(
+                TokenType::RightParen,
+                ParserError::MissingRightParenthesisAfterExpression,
+            )?;
             return Ok(Expr::grouping_ref(expr));
         }
 

@@ -14,6 +14,11 @@ pub enum Expr<'a> {
     Literal {
         value: LiteralValue,
     },
+    Logical {
+        left: ExprRef<'a>,
+        operator: &'a Token,
+        right: ExprRef<'a>,
+    },
     Unary {
         operator: &'a Token,
         right: ExprRef<'a>,
@@ -56,6 +61,18 @@ impl<'a> Expr<'a> {
 
     pub fn literal_ref(value: LiteralValue) -> ExprRef<'a> {
         Box::new(Expr::literal(value))
+    }
+
+    pub fn logical(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+        Expr::Logical {
+            left,
+            operator,
+            right,
+        }
+    }
+
+    pub fn logical_ref(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
+        Box::new(Expr::logical(left, operator, right))
     }
 
     pub fn unary(operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {

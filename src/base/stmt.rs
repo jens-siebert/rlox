@@ -9,6 +9,11 @@ pub enum Stmt<'a> {
     Expression {
         expression: ExprRef<'a>,
     },
+    If {
+        condition: ExprRef<'a>,
+        then_branch: StmtRef<'a>,
+        else_branch: Option<StmtRef<'a>>,
+    },
     Print {
         expression: ExprRef<'a>,
     },
@@ -35,6 +40,26 @@ impl<'a> Stmt<'a> {
 
     pub fn expression_ref(expression: ExprRef) -> StmtRef {
         Box::new(Stmt::expression(expression))
+    }
+
+    pub fn if_stmt(
+        condition: ExprRef<'a>,
+        then_branch: StmtRef<'a>,
+        else_branch: Option<StmtRef<'a>>,
+    ) -> Stmt<'a> {
+        Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        }
+    }
+
+    pub fn if_stmt_ref(
+        condition: ExprRef<'a>,
+        then_branch: StmtRef<'a>,
+        else_branch: Option<StmtRef<'a>>,
+    ) -> StmtRef<'a> {
+        Box::new(Stmt::if_stmt(condition, then_branch, else_branch))
     }
 
     pub fn print(expression: ExprRef) -> Stmt {
