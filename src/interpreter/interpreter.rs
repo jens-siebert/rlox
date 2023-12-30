@@ -38,13 +38,16 @@ impl Interpreter {
         statements: &Vec<StmtRef>,
         environment: EnvironmentRef,
     ) -> Result<(), RuntimeError> {
-        let previous = self.environment.replace(environment);
+        self.environment.replace(environment);
 
         for statement in statements {
             self.execute(statement)?
         }
 
-        self.environment.replace(previous);
+        let enclosing = self.environment.borrow().enclosing();
+        if let Some(e) = enclosing {
+            self.environment.replace(e);
+        }
 
         Ok(())
     }
@@ -218,6 +221,13 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
                 self.environment.borrow_mut().define(&name.lexeme, &value);
+                Ok(())
+            }
+            Stmt::While { condition, body } => {
+                while self.is_truthy(&self.evaluate(condition)?) {
+                    self.execute(body)?;
+                }
+
                 Ok(())
             }
         }

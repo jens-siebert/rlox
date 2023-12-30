@@ -21,6 +21,10 @@ pub enum Stmt<'a> {
         name: &'a Token,
         initializer: ExprRef<'a>,
     },
+    While {
+        condition: ExprRef<'a>,
+        body: StmtRef<'a>,
+    },
 }
 
 pub type StmtRef<'a> = Box<Stmt<'a>>;
@@ -76,6 +80,14 @@ impl<'a> Stmt<'a> {
 
     pub fn var_ref(name: &'a Token, initializer: ExprRef<'a>) -> StmtRef<'a> {
         Box::new(Stmt::var(name, initializer))
+    }
+
+    pub fn while_stmt(condition: ExprRef<'a>, body: StmtRef<'a>) -> Stmt<'a> {
+        Stmt::While { condition, body }
+    }
+
+    pub fn while_stmt_ref(condition: ExprRef<'a>, body: StmtRef<'a>) -> StmtRef<'a> {
+        Box::new(Stmt::while_stmt(condition, body))
     }
 
     pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt<'a>, R>) -> Result<R, RuntimeError> {

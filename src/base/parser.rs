@@ -17,6 +17,8 @@ pub enum ParserError {
     MissingRightParenthesisAfterCondition,
     #[error("Expect '(' after 'if' statement.")]
     MissingLeftParenthesisAfterIfStatement,
+    #[error("Expect '(' after 'while' statement.")]
+    MissingLeftParenthesisAfterWhileStatement,
     #[error("Expect '}}' after block.")]
     MissingRightBrace,
     #[error("Expect ';' after value.")]
@@ -82,6 +84,8 @@ impl<'a> Parser<'a> {
             self.if_statement()
         } else if self.match_token_types(&[TokenType::Print])? {
             self.print_statement()
+        } else if self.match_token_types(&[TokenType::While])? {
+            self.while_statement()
         } else if self.match_token_types(&[TokenType::LeftBrace])? {
             self.block()
         } else {
@@ -118,6 +122,23 @@ impl<'a> Parser<'a> {
             ParserError::MissingSemicolonAfterValue,
         )?;
         Ok(Stmt::print_ref(value))
+    }
+
+    fn while_statement(&self) -> Result<StmtRef, ParserError> {
+        self.consume(
+            TokenType::LeftParen,
+            ParserError::MissingLeftParenthesisAfterWhileStatement,
+        )?;
+
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::RightParen,
+            ParserError::MissingRightParenthesisAfterCondition,
+        )?;
+
+        let body = self.statement()?;
+
+        Ok(Stmt::while_stmt_ref(condition, body))
     }
 
     fn block(&self) -> Result<StmtRef, ParserError> {
@@ -202,8 +223,8 @@ impl<'a> Parser<'a> {
         while self.match_token_types(&[
             TokenType::Greater,
             TokenType::GreaterEqual,
-            TokenType::Greater,
-            TokenType::GreaterEqual,
+            TokenType::Less,
+            TokenType::LessEqual,
         ])? {
             let operator = self.previous()?;
             let right = self.term()?;

@@ -26,6 +26,10 @@ impl Environment {
         }
     }
 
+    pub(crate) fn enclosing(&self) -> Option<EnvironmentRef> {
+        self.enclosing.clone()
+    }
+
     pub(crate) fn new_scope_ref(enclosing: Option<EnvironmentRef>) -> EnvironmentRef {
         Box::new(Environment::new_scope(enclosing))
     }
