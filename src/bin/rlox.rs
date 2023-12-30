@@ -1,11 +1,9 @@
-use std::fs;
-use std::io::Write;
-
 use clap::Parser as ClapParser;
 use rlox::base::parser::Parser;
-
 use rlox::base::scanner::Scanner;
 use rlox::interpreter::interpreter::Interpreter;
+use std::fs;
+use std::io::Write;
 
 struct LoxEnvironment {
     interpreter: Interpreter,

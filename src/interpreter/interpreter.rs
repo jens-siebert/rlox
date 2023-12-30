@@ -1,5 +1,7 @@
-use crate::base::parser::{Expr, ExprRef, LiteralValue, LiteralValueRef, Stmt, StmtRef};
+use crate::base::expr::{Expr, ExprRef};
+use crate::base::literal::{LiteralValue, LiteralValueRef};
 use crate::base::scanner::TokenType;
+use crate::base::stmt::{Stmt, StmtRef};
 use crate::base::visitor::{RuntimeError, Visitor};
 use std::cell::RefCell;
 use std::collections::HashMap;
