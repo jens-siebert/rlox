@@ -4,30 +4,40 @@ use crate::base::visitor::{RuntimeError, Visitor};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 struct Environment {
     enclosing: Option<EnvironmentRef>,
-    values: RefCell<HashMap<String, LiteralValueRef>>,
+    values: HashMap<String, LiteralValueRef>,
 }
 
 type EnvironmentRef = Box<Environment>;
 
 impl Environment {
     fn new() -> Self {
-        Environment::new_with_local_scope(None)
+        Environment::new_local_scope(None)
     }
 
-    fn new_with_local_scope(enclosing: Option<EnvironmentRef>) -> Self {
+    fn new_ref() -> EnvironmentRef {
+        Box::new(Environment::new())
+    }
+
+    fn new_local_scope(enclosing: Option<EnvironmentRef>) -> Self {
         Environment {
             enclosing,
-            values: RefCell::new(HashMap::new()),
+            values: HashMap::new(),
         }
     }
-    fn define(&self, name: &String, value: &LiteralValueRef) {
-        self.values.borrow_mut().insert(name.clone(), value.clone());
+
+    fn new_local_scope_ref(enclosing: Option<EnvironmentRef>) -> EnvironmentRef {
+        Box::new(Environment::new_local_scope(enclosing))
+    }
+
+    fn define(&mut self, name: &str, value: &LiteralValueRef) {
+        self.values.insert(name.to_string(), value.clone());
     }
 
     fn get(&self, name: &String) -> Result<LiteralValueRef, RuntimeError> {
-        match self.values.borrow().get(name) {
+        match self.values.get(name) {
             None => match &self.enclosing {
                 None => Err(RuntimeError::UndefinedVariable),
                 Some(scope) => scope.get(name),
@@ -36,12 +46,12 @@ impl Environment {
         }
     }
 
-    fn assign(&self, name: &String, value: &LiteralValueRef) -> Result<(), RuntimeError> {
-        if self.values.borrow().contains_key(name) {
-            self.values.borrow_mut().insert(name.clone(), value.clone());
+    fn assign(&mut self, name: &String, value: &LiteralValueRef) -> Result<(), RuntimeError> {
+        if self.values.contains_key(name) {
+            self.values.insert(name.clone(), value.clone());
             Ok(())
         } else {
-            match &self.enclosing {
+            match &mut self.enclosing {
                 None => Err(RuntimeError::UndefinedVariable),
                 Some(scope) => scope.assign(name, value),
             }
@@ -50,13 +60,13 @@ impl Environment {
 }
 
 pub struct Interpreter {
-    environment: Environment,
+    environment: RefCell<EnvironmentRef>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
-            environment: Environment::new(),
+            environment: RefCell::new(Environment::new_ref()),
         }
     }
 
@@ -66,6 +76,22 @@ impl Interpreter {
 
     fn execute(&self, stmt: &StmtRef) -> Result<(), RuntimeError> {
         stmt.accept(self)
+    }
+
+    fn execute_block(
+        &self,
+        statements: &Vec<StmtRef>,
+        environment: EnvironmentRef,
+    ) -> Result<(), RuntimeError> {
+        let previous = self.environment.replace(environment);
+
+        for statement in statements {
+            self.execute(statement)?
+        }
+
+        self.environment.replace(previous);
+
+        Ok(())
     }
 
     pub fn interpret(&self, statements: Vec<StmtRef>) {
@@ -174,13 +200,13 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
-            Expr::Variable { name } => match self.environment.get(&name.lexeme) {
+            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
                 Ok(value) => Ok(value),
                 Err(_) => Err(RuntimeError::UndefinedVariable),
             },
             Expr::Assign { name, value } => {
                 let v = self.evaluate(value)?;
-                self.environment.assign(&name.lexeme, &v)?;
+                self.environment.borrow_mut().assign(&name.lexeme, &v)?;
                 Ok(v)
             }
         }
@@ -190,6 +216,13 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
 impl Visitor<Stmt<'_>, ()> for Interpreter {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
+            Stmt::Block { statements } => {
+                let old_scope = self.environment.borrow().clone();
+                self.execute_block(
+                    statements,
+                    Environment::new_local_scope_ref(Some(old_scope)),
+                )
+            }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
                 Ok(())
@@ -201,7 +234,7 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
-                self.environment.define(&name.lexeme, &value);
+                self.environment.borrow_mut().define(&name.lexeme, &value);
                 Ok(())
             }
         }

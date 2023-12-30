@@ -150,6 +150,9 @@ impl<'a> Expr<'a> {
 }
 
 pub enum Stmt<'a> {
+    Block {
+        statements: Vec<StmtRef<'a>>,
+    },
     Expression {
         expression: ExprRef<'a>,
     },
@@ -165,6 +168,14 @@ pub enum Stmt<'a> {
 pub type StmtRef<'a> = Box<Stmt<'a>>;
 
 impl<'a> Stmt<'a> {
+    pub fn block(statements: Vec<StmtRef>) -> Stmt {
+        Stmt::Block { statements }
+    }
+
+    pub fn block_ref(statements: Vec<StmtRef>) -> StmtRef {
+        Box::new(Stmt::block(statements))
+    }
+
     pub fn expression(expression: ExprRef) -> Stmt {
         Stmt::Expression { expression }
     }
@@ -202,6 +213,8 @@ pub enum ParserError {
     MissingExpression,
     #[error("Expect ')' after expression.")]
     MissingRightParenthesis,
+    #[error("Expect '}}' after block.")]
+    MissingRightBrace,
     #[error("Expect ';' after value.")]
     MissingSemicolonAfterValue,
     #[error("Expect ';' after expression.")]
@@ -257,6 +270,8 @@ impl Parser<'_> {
     fn statement(&self) -> Result<StmtRef, ParserError> {
         if self.match_token_types(&[TokenType::Print])? {
             self.print_statement()
+        } else if self.match_token_types(&[TokenType::LeftBrace])? {
+            self.block()
         } else {
             self.expression_statement()
         }
@@ -269,6 +284,18 @@ impl Parser<'_> {
             ParserError::MissingSemicolonAfterValue,
         )?;
         Ok(Stmt::print_ref(value))
+    }
+
+    fn block(&self) -> Result<StmtRef, ParserError> {
+        let mut statements: Vec<StmtRef> = vec![];
+
+        while !self.check(&TokenType::RightBrace)? && !self.is_at_end()? {
+            statements.push(self.declaration()?)
+        }
+
+        self.consume(TokenType::RightBrace, ParserError::MissingRightBrace)?;
+
+        Ok(Stmt::block_ref(statements))
     }
 
     fn expression_statement(&self) -> Result<StmtRef, ParserError> {
