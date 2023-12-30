@@ -3,63 +3,8 @@ use crate::base::literal::{LiteralValue, LiteralValueRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
 use crate::base::visitor::{RuntimeError, Visitor};
+use crate::interpreter::environment::{Environment, EnvironmentRef};
 use std::cell::RefCell;
-use std::collections::HashMap;
-
-#[derive(Clone)]
-struct Environment {
-    enclosing: Option<EnvironmentRef>,
-    values: HashMap<String, LiteralValueRef>,
-}
-
-type EnvironmentRef = Box<Environment>;
-
-impl Environment {
-    fn new() -> Self {
-        Environment::new_local_scope(None)
-    }
-
-    fn new_ref() -> EnvironmentRef {
-        Box::new(Environment::new())
-    }
-
-    fn new_local_scope(enclosing: Option<EnvironmentRef>) -> Self {
-        Environment {
-            enclosing,
-            values: HashMap::new(),
-        }
-    }
-
-    fn new_local_scope_ref(enclosing: Option<EnvironmentRef>) -> EnvironmentRef {
-        Box::new(Environment::new_local_scope(enclosing))
-    }
-
-    fn define(&mut self, name: &str, value: &LiteralValueRef) {
-        self.values.insert(name.to_string(), value.clone());
-    }
-
-    fn get(&self, name: &String) -> Result<LiteralValueRef, RuntimeError> {
-        match self.values.get(name) {
-            None => match &self.enclosing {
-                None => Err(RuntimeError::UndefinedVariable),
-                Some(scope) => scope.get(name),
-            },
-            Some(value) => Ok(value.clone()),
-        }
-    }
-
-    fn assign(&mut self, name: &String, value: &LiteralValueRef) -> Result<(), RuntimeError> {
-        if self.values.contains_key(name) {
-            self.values.insert(name.clone(), value.clone());
-            Ok(())
-        } else {
-            match &mut self.enclosing {
-                None => Err(RuntimeError::UndefinedVariable),
-                Some(scope) => scope.assign(name, value),
-            }
-        }
-    }
-}
 
 pub struct Interpreter {
     environment: RefCell<EnvironmentRef>,
