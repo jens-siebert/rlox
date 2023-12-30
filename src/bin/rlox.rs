@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
 
@@ -19,34 +18,19 @@ impl LoxEnvironment {
         }
     }
 
-    fn run_string(&self, input: String) -> Result<(), Box<dyn std::error::Error>> {
+    fn run(&self, input: String) -> Result<(), Box<dyn std::error::Error>> {
         let mut scanner = Scanner::new(input);
-        let tokens = match scanner.scan_tokens() {
-            Ok(tokens) => Ok(tokens),
-            Err(error) => {
-                eprintln!("{}", error);
-                Err(error)
-            }
-        }?;
+        let tokens = scanner.scan_tokens()?;
 
-        let parser = Parser {
-            tokens,
-            current: RefCell::new(0),
-        };
-        let statements = match parser.parse() {
-            Ok(statements) => Ok(statements),
-            Err(error) => {
-                eprintln!("{}", error);
-                Err(error)
-            }
-        }?;
+        let parser = Parser::new(tokens);
+        let statements = parser.parse()?;
 
-        self.interpreter.interpret(statements);
+        self.interpreter.interpret(statements)?;
 
         Ok(())
     }
 
-    fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+    fn run_prompt(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Lox interpreter...");
         loop {
             print!("> ");
@@ -54,16 +38,17 @@ impl LoxEnvironment {
             let mut input = String::new();
             std::io::stdin()
                 .read_line(&mut input)
-                .expect("Unable to read user input!");
+                .expect("Unable to read user input");
 
-            self.run_string(input)?;
+            if let Err(error) = self.run(input) {
+                eprintln!("{}", error)
+            }
         }
     }
 
     fn run_file(&self, script_file: String) -> Result<(), Box<dyn std::error::Error>> {
-        let script_content = fs::read_to_string(script_file)?;
-
-        self.run_string(script_content)
+        let script_content = fs::read_to_string(script_file).expect("Unable to read input file");
+        self.run(script_content)
     }
 }
 
@@ -80,6 +65,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.script {
         Some(script_file) => environment.run_file(script_file),
-        None => environment.run(),
+        None => environment.run_prompt(),
     }
 }

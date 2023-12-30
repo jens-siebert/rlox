@@ -232,7 +232,13 @@ pub struct Parser<'a> {
     pub current: RefCell<usize>,
 }
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a Vec<Token>) -> Self {
+        Parser {
+            tokens,
+            current: RefCell::new(0),
+        }
+    }
     pub fn parse(&self) -> Result<Vec<StmtRef>, ParserError> {
         let mut statements: Vec<StmtRef> = vec![];
 

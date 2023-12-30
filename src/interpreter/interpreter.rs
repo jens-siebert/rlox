@@ -94,12 +94,12 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn interpret(&self, statements: Vec<StmtRef>) {
+    pub fn interpret(&self, statements: Vec<StmtRef>) -> Result<(), RuntimeError> {
         for statement in statements {
-            if let Err(error) = self.execute(&statement) {
-                eprintln!("{}", error);
-            }
+            self.execute(&statement)?;
         }
+
+        Ok(())
     }
 }
 
