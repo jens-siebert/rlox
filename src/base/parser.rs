@@ -11,14 +11,18 @@ pub enum ParserError {
     TokenReadError,
     #[error("Unknown token detected.")]
     MissingExpression,
-    #[error("Expect ')' after expression.")]
-    MissingRightParenthesisAfterExpression,
-    #[error("Expect ')' after condition.")]
-    MissingRightParenthesisAfterCondition,
     #[error("Expect '(' after 'if' statement.")]
     MissingLeftParenthesisAfterIfStatement,
     #[error("Expect '(' after 'while' statement.")]
     MissingLeftParenthesisAfterWhileStatement,
+    #[error("Expect '(' after 'for' statement.")]
+    MissingLeftParenthesisAfterForStatement,
+    #[error("Expect ')' after expression.")]
+    MissingRightParenthesisAfterExpression,
+    #[error("Expect ')' after condition.")]
+    MissingRightParenthesisAfterCondition,
+    #[error("Expect ')' after 'for' statement.")]
+    MissingRightParenthesisAfterForStatement,
     #[error("Expect '}}' after block.")]
     MissingRightBrace,
     #[error("Expect ';' after value.")]
@@ -27,6 +31,8 @@ pub enum ParserError {
     MissingSemicolonAfterExpression,
     #[error("Expect ';' after variable declaration.")]
     MissingSemicolonAfterVariableDeclaration,
+    #[error("Expect ';' after loop condition.")]
+    MissingSemicolonAfterLoopCondition,
     #[error("Expect variable name.")]
     MissingVariableName,
     #[error("Invalid assignment target.")]
@@ -80,7 +86,9 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&self) -> Result<StmtRef, ParserError> {
-        if self.match_token_types(&[TokenType::If])? {
+        if self.match_token_types(&[TokenType::For])? {
+            self.for_statement()
+        } else if self.match_token_types(&[TokenType::If])? {
             self.if_statement()
         } else if self.match_token_types(&[TokenType::Print])? {
             self.print_statement()
@@ -91,6 +99,57 @@ impl<'a> Parser<'a> {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn for_statement(&self) -> Result<StmtRef, ParserError> {
+        self.consume(
+            TokenType::LeftParen,
+            ParserError::MissingLeftParenthesisAfterForStatement,
+        )?;
+
+        let initializer = if self.match_token_types(&[TokenType::Semicolon])? {
+            None
+        } else if self.match_token_types(&[TokenType::Var])? {
+            Some(self.variable_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if !self.check(&TokenType::Semicolon)? {
+            self.expression()?
+        } else {
+            Expr::literal_ref(LiteralValue::Boolean(true))
+        };
+
+        self.consume(
+            TokenType::Semicolon,
+            ParserError::MissingSemicolonAfterLoopCondition,
+        )?;
+
+        let increment = if !self.check(&TokenType::RightParen)? {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            TokenType::RightParen,
+            ParserError::MissingRightParenthesisAfterForStatement,
+        )?;
+
+        let mut body = self.statement()?;
+
+        if let Some(inc) = increment {
+            body = Stmt::block_ref(vec![body, Stmt::expression_ref(inc)])
+        }
+
+        body = Stmt::while_stmt_ref(condition, body);
+
+        if let Some(init) = initializer {
+            body = Stmt::block_ref(vec![init, body])
+        }
+
+        Ok(body)
     }
 
     fn if_statement(&self) -> Result<StmtRef, ParserError> {
