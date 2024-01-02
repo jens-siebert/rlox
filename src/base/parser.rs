@@ -10,20 +10,26 @@ pub enum ParserError {
     TokenReadError,
     #[error("Unknown token detected.")]
     MissingExpression,
+    #[error("Expect '(' after function name.")]
+    MissingLeftParenthesisAfterFunctionName,
     #[error("Expect '(' after 'if' statement.")]
     MissingLeftParenthesisAfterIfStatement,
     #[error("Expect '(' after 'while' statement.")]
     MissingLeftParenthesisAfterWhileStatement,
     #[error("Expect '(' after 'for' statement.")]
     MissingLeftParenthesisAfterForStatement,
+    #[error("Expect '{{' before function body.")]
+    MissingLeftBraceBeforeFunctionBody,
     #[error("Expect ')' after expression.")]
     MissingRightParenthesisAfterExpression,
     #[error("Expect ')' after condition.")]
     MissingRightParenthesisAfterCondition,
     #[error("Expect ')' after 'for' statement.")]
     MissingRightParenthesisAfterForStatement,
+    #[error("Expect ')' after parameters.")]
+    MissingRightParenthesisAfterParameters,
     #[error("Expect '}}' after block.")]
-    MissingRightBrace,
+    MissingRightBraceAfterBlock,
     #[error("Expect ';' after value.")]
     MissingSemicolonAfterValue,
     #[error("Expect ';' after expression.")]
@@ -34,6 +40,10 @@ pub enum ParserError {
     MissingSemicolonAfterLoopCondition,
     #[error("Expect variable name.")]
     MissingVariableName,
+    #[error("Expect function name.")]
+    MissingFunctionName,
+    #[error("Expect function name.")]
+    MissingParameterName,
     #[error("Invalid assignment target.")]
     InvalidAssignmentTarget,
 }
@@ -61,11 +71,49 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&self) -> Result<StmtRef, ParserError> {
-        if self.match_token_types(&[TokenType::Var])? {
+        if self.match_token_types(&[TokenType::Fun])? {
+            self.function()
+        } else if self.match_token_types(&[TokenType::Var])? {
             self.variable_declaration()
         } else {
             self.statement()
         }
+    }
+
+    fn function(&self) -> Result<StmtRef, ParserError> {
+        let name = self.consume(TokenType::Identifier, ParserError::MissingFunctionName)?;
+        self.consume(
+            TokenType::LeftParen,
+            ParserError::MissingLeftParenthesisAfterFunctionName,
+        )?;
+
+        let mut parameters: Vec<&Token> = vec![];
+
+        if !self.check(&TokenType::RightParen)? {
+            loop {
+                let parameter =
+                    self.consume(TokenType::Identifier, ParserError::MissingParameterName)?;
+
+                parameters.push(parameter);
+
+                if !self.match_token_types(&[TokenType::Comma])? {
+                    break;
+                }
+            }
+        }
+
+        self.consume(
+            TokenType::RightParen,
+            ParserError::MissingRightParenthesisAfterParameters,
+        )?;
+        self.consume(
+            TokenType::LeftBrace,
+            ParserError::MissingLeftBraceBeforeFunctionBody,
+        )?;
+
+        let body = self.block()?;
+
+        Ok(Stmt::function_ref(name, parameters, body))
     }
 
     fn variable_declaration(&self) -> Result<StmtRef, ParserError> {
@@ -206,7 +254,10 @@ impl<'a> Parser<'a> {
             statements.push(self.declaration()?)
         }
 
-        self.consume(TokenType::RightBrace, ParserError::MissingRightBrace)?;
+        self.consume(
+            TokenType::RightBrace,
+            ParserError::MissingRightBraceAfterBlock,
+        )?;
 
         Ok(Stmt::block_ref(statements))
     }

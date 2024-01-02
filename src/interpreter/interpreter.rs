@@ -195,6 +195,7 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
                 self.evaluate(expression)?;
                 Ok(())
             }
+            Stmt::Function { name, params, body } => Ok(()),
             Stmt::If {
                 condition,
                 then_branch,

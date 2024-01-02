@@ -9,6 +9,11 @@ pub enum Stmt<'a> {
     Expression {
         expression: ExprRef<'a>,
     },
+    Function {
+        name: &'a Token,
+        params: Vec<&'a Token>,
+        body: StmtRef<'a>,
+    },
     If {
         condition: ExprRef<'a>,
         then_branch: StmtRef<'a>,
@@ -40,6 +45,14 @@ impl<'a> Stmt<'a> {
 
     pub fn expression(expression: ExprRef) -> Stmt {
         Stmt::Expression { expression }
+    }
+
+    pub fn function(name: &'a Token, params: Vec<&'a Token>, body: StmtRef<'a>) -> Stmt<'a> {
+        Stmt::Function { name, params, body }
+    }
+
+    pub fn function_ref(name: &'a Token, params: Vec<&'a Token>, body: StmtRef<'a>) -> StmtRef<'a> {
+        Box::new(Stmt::function(name, params, body))
     }
 
     pub fn expression_ref(expression: ExprRef) -> StmtRef {
