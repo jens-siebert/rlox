@@ -1,6 +1,12 @@
-use crate::base::literal::LiteralValue;
 use crate::base::scanner::Token;
 use crate::base::visitor::{RuntimeError, Visitor};
+
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+    Boolean(bool),
+    None,
+}
 
 pub enum Expr<'a> {
     Binary {

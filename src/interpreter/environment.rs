@@ -1,11 +1,11 @@
-use crate::base::literal::LiteralValueRef;
+use crate::base::expr_result::ExprResultRef;
 use crate::base::visitor::RuntimeError;
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Environment {
     enclosing: Option<EnvironmentRef>,
-    values: HashMap<String, LiteralValueRef>,
+    values: HashMap<String, ExprResultRef>,
 }
 
 pub type EnvironmentRef = Box<Environment>;
@@ -37,11 +37,11 @@ impl Environment {
         self.enclosing.clone()
     }
 
-    pub(crate) fn define(&mut self, name: &str, value: &LiteralValueRef) {
+    pub(crate) fn define(&mut self, name: &str, value: &ExprResultRef) {
         self.values.insert(name.to_string(), value.clone());
     }
 
-    pub(crate) fn get(&self, name: &String) -> Result<LiteralValueRef, RuntimeError> {
+    pub(crate) fn get(&self, name: &String) -> Result<ExprResultRef, RuntimeError> {
         match self.values.get(name) {
             None => match &self.enclosing {
                 None => Err(RuntimeError::UndefinedVariable),
@@ -54,7 +54,7 @@ impl Environment {
     pub(crate) fn assign(
         &mut self,
         name: &String,
-        value: &LiteralValueRef,
+        value: &ExprResultRef,
     ) -> Result<(), RuntimeError> {
         if self.values.contains_key(name) {
             self.values.insert(name.clone(), value.clone());

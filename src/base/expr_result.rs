@@ -1,56 +1,56 @@
 use std::fmt::Display;
 
 #[derive(Clone, PartialEq)]
-pub enum LiteralValue {
+pub enum ExprResult {
     Number(f64),
     String(String),
     Boolean(bool),
     None,
 }
 
-pub type LiteralValueRef = Box<LiteralValue>;
+pub type ExprResultRef = Box<ExprResult>;
 
-impl LiteralValue {
+impl ExprResult {
     pub fn number(value: f64) -> Self {
-        LiteralValue::Number(value)
+        ExprResult::Number(value)
     }
 
     pub fn number_ref(value: f64) -> Box<Self> {
-        Box::new(LiteralValue::number(value))
+        Box::new(ExprResult::number(value))
     }
 
     pub fn string(value: String) -> Self {
-        LiteralValue::String(value)
+        ExprResult::String(value)
     }
 
     pub fn string_ref(value: String) -> Box<Self> {
-        Box::new(LiteralValue::string(value))
+        Box::new(ExprResult::string(value))
     }
 
     pub fn boolean(value: bool) -> Self {
-        LiteralValue::Boolean(value)
+        ExprResult::Boolean(value)
     }
 
     pub fn boolean_ref(value: bool) -> Box<Self> {
-        Box::new(LiteralValue::boolean(value))
+        Box::new(ExprResult::boolean(value))
     }
 
     pub fn none() -> Self {
-        LiteralValue::None
+        ExprResult::None
     }
 
     pub fn none_ref() -> Box<Self> {
-        Box::new(LiteralValue::none())
+        Box::new(ExprResult::none())
     }
 }
 
-impl Display for LiteralValue {
+impl Display for ExprResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let result = match self {
-            LiteralValue::Number(value) => value.to_string(),
-            LiteralValue::String(value) => value.to_string(),
-            LiteralValue::Boolean(value) => value.to_string(),
-            LiteralValue::None => String::from("nil"),
+            ExprResult::Number(value) => value.to_string(),
+            ExprResult::String(value) => value.to_string(),
+            ExprResult::Boolean(value) => value.to_string(),
+            ExprResult::None => String::from("nil"),
         };
 
         write!(f, "{}", result)

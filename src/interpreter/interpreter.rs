@@ -1,5 +1,5 @@
-use crate::base::expr::{Expr, ExprRef};
-use crate::base::literal::{LiteralValue, LiteralValueRef};
+use crate::base::expr::{Expr, ExprRef, LiteralValue};
+use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
 use crate::base::visitor::{RuntimeError, Visitor};
@@ -17,15 +17,15 @@ impl Interpreter {
         }
     }
 
-    fn is_truthy(&self, literal_value: &LiteralValueRef) -> bool {
+    fn is_truthy(&self, literal_value: &ExprResultRef) -> bool {
         match **literal_value {
-            LiteralValue::Boolean(value) => value,
-            LiteralValue::None => false,
+            ExprResult::Boolean(value) => value,
+            ExprResult::None => false,
             _ => true,
         }
     }
 
-    fn evaluate(&self, expr: &ExprRef) -> Result<LiteralValueRef, RuntimeError> {
+    fn evaluate(&self, expr: &ExprRef) -> Result<ExprResultRef, RuntimeError> {
         expr.accept(self)
     }
 
@@ -67,8 +67,8 @@ impl Default for Interpreter {
     }
 }
 
-impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
-    fn visit(&self, input: &Expr<'_>) -> Result<LiteralValueRef, RuntimeError> {
+impl Visitor<Expr<'_>, ExprResultRef> for Interpreter {
+    fn visit(&self, input: &Expr<'_>) -> Result<ExprResultRef, RuntimeError> {
         match input {
             Expr::Binary {
                 left,
@@ -80,55 +80,55 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
 
                 match &operator.token_type {
                     TokenType::Greater => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::boolean_ref(v1 > v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::boolean_ref(v1 > v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::GreaterEqual => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::boolean_ref(v1 >= v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::boolean_ref(v1 >= v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Less => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::boolean_ref(v1 < v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::boolean_ref(v1 < v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::LessEqual => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::boolean_ref(v1 <= v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::boolean_ref(v1 <= v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::BangEqual => Ok(LiteralValue::boolean_ref(*left != *right)),
-                    TokenType::EqualEqual => Ok(LiteralValue::boolean_ref(*left == *right)),
+                    TokenType::BangEqual => Ok(ExprResult::boolean_ref(*left != *right)),
+                    TokenType::EqualEqual => Ok(ExprResult::boolean_ref(*left == *right)),
                     TokenType::Minus => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::number_ref(v1 - v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::number_ref(v1 - v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Slash => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::number_ref(v1 / v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::number_ref(v1 / v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Star => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::number_ref(v1 * v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::number_ref(v1 * v2))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Plus => match (*left, *right) {
-                        (LiteralValue::Number(v1), LiteralValue::Number(v2)) => {
-                            Ok(LiteralValue::number_ref(v1 + v2))
+                        (ExprResult::Number(v1), ExprResult::Number(v2)) => {
+                            Ok(ExprResult::number_ref(v1 + v2))
                         }
-                        (LiteralValue::String(v1), LiteralValue::String(v2)) => {
-                            Ok(LiteralValue::string_ref(v1.clone() + v2.clone().as_str()))
+                        (ExprResult::String(v1), ExprResult::String(v2)) => {
+                            Ok(ExprResult::string_ref(v1.clone() + v2.clone().as_str()))
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
@@ -137,10 +137,10 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
             }
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
-                LiteralValue::Number(value) => Ok(LiteralValue::number_ref(*value)),
-                LiteralValue::String(value) => Ok(LiteralValue::string_ref(value.clone())),
-                LiteralValue::Boolean(value) => Ok(LiteralValue::boolean_ref(*value)),
-                LiteralValue::None => Ok(LiteralValue::none_ref()),
+                LiteralValue::Number(value) => Ok(ExprResult::number_ref(*value)),
+                LiteralValue::String(value) => Ok(ExprResult::string_ref(value.clone())),
+                LiteralValue::Boolean(value) => Ok(ExprResult::boolean_ref(*value)),
+                LiteralValue::None => Ok(ExprResult::none_ref()),
             },
             Expr::Logical {
                 left,
@@ -164,10 +164,10 @@ impl Visitor<Expr<'_>, LiteralValueRef> for Interpreter {
 
                 match &operator.token_type {
                     TokenType::Minus => match *right {
-                        LiteralValue::Number(value) => Ok(LiteralValue::number_ref(-value)),
+                        ExprResult::Number(value) => Ok(ExprResult::number_ref(-value)),
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Bang => Ok(LiteralValue::boolean_ref(!self.is_truthy(&right))),
+                    TokenType::Bang => Ok(ExprResult::boolean_ref(!self.is_truthy(&right))),
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }

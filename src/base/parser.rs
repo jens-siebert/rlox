@@ -1,5 +1,4 @@
-use crate::base::expr::{Expr, ExprRef};
-use crate::base::literal::LiteralValue;
+use crate::base::expr::{Expr, ExprRef, LiteralValue};
 use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::{Stmt, StmtRef};
 use std::cell::RefCell;
