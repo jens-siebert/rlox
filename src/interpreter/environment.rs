@@ -12,26 +12,29 @@ pub type EnvironmentRef = Box<Environment>;
 
 impl Environment {
     fn new() -> Self {
-        Environment::new_scope(None)
+        Environment {
+            enclosing: None,
+            values: HashMap::new(),
+        }
     }
 
     pub(crate) fn new_ref() -> Box<Self> {
         Box::new(Environment::new())
     }
 
-    fn new_scope(enclosing: Option<EnvironmentRef>) -> Self {
+    fn new_scope(enclosing: EnvironmentRef) -> Self {
         Environment {
-            enclosing,
+            enclosing: Some(enclosing),
             values: HashMap::new(),
         }
     }
 
-    pub(crate) fn enclosing(&self) -> Option<EnvironmentRef> {
-        self.enclosing.clone()
+    pub(crate) fn new_scope_ref(enclosing: EnvironmentRef) -> EnvironmentRef {
+        Box::new(Environment::new_scope(enclosing))
     }
 
-    pub(crate) fn new_scope_ref(enclosing: Option<EnvironmentRef>) -> EnvironmentRef {
-        Box::new(Environment::new_scope(enclosing))
+    pub(crate) fn enclosing(&self) -> Option<EnvironmentRef> {
+        self.enclosing.clone()
     }
 
     pub(crate) fn define(&mut self, name: &str, value: &LiteralValueRef) {

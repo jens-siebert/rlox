@@ -189,7 +189,7 @@ impl Visitor<Stmt<'_>, ()> for Interpreter {
         match input {
             Stmt::Block { statements } => {
                 let old_scope = self.environment.borrow().clone();
-                self.execute_block(statements, Environment::new_scope_ref(Some(old_scope)))
+                self.execute_block(statements, Environment::new_scope_ref(old_scope))
             }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
