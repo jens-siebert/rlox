@@ -28,6 +28,8 @@ pub enum ParserError {
     MissingRightParenthesisAfterForStatement,
     #[error("Expect ')' after parameters.")]
     MissingRightParenthesisAfterParameters,
+    #[error("Expect ')' after arguments.")]
+    MissingRightParenthesisAfterArguments,
     #[error("Expect '}}' after block.")]
     MissingRightBraceAfterBlock,
     #[error("Expect ';' after value.")]
@@ -374,7 +376,37 @@ impl<'a> Parser<'a> {
             return Ok(Expr::unary_ref(operator, right));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    fn call(&self) -> Result<ExprRef, ParserError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token_types(&[TokenType::LeftParen])? {
+                let mut arguments: Vec<ExprRef> = vec![];
+                if !self.check(&TokenType::RightParen)? {
+                    loop {
+                        arguments.push(self.expression()?);
+
+                        if !self.match_token_types(&[TokenType::Comma])? {
+                            break;
+                        }
+                    }
+                }
+
+                self.consume(
+                    TokenType::RightParen,
+                    ParserError::MissingRightParenthesisAfterArguments,
+                )?;
+
+                expr = Expr::call_ref(expr, arguments);
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
     }
 
     fn primary(&self) -> Result<ExprRef, ParserError> {

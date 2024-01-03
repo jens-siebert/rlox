@@ -135,6 +135,7 @@ impl Visitor<Expr<'_>, ExprResultRef> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
+            Expr::Call { .. } => todo!(),
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
                 LiteralValue::Number(value) => Ok(ExprResult::number_ref(*value)),

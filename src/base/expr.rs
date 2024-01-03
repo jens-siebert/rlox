@@ -14,6 +14,10 @@ pub enum Expr<'a> {
         operator: &'a Token,
         right: ExprRef<'a>,
     },
+    Call {
+        callee: ExprRef<'a>,
+        arguments: Vec<ExprRef<'a>>,
+    },
     Grouping {
         expression: ExprRef<'a>,
     },
@@ -51,6 +55,14 @@ impl<'a> Expr<'a> {
 
     pub fn binary_ref(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
         Box::new(Expr::binary(left, operator, right))
+    }
+
+    pub fn call(callee: ExprRef<'a>, arguments: Vec<ExprRef<'a>>) -> Expr<'a> {
+        Expr::Call { callee, arguments }
+    }
+
+    pub fn call_ref(callee: ExprRef<'a>, arguments: Vec<ExprRef<'a>>) -> ExprRef<'a> {
+        Box::new(Expr::call(callee, arguments))
     }
 
     pub fn grouping(expression: ExprRef) -> Expr {
