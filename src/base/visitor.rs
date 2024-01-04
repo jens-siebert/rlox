@@ -10,6 +10,8 @@ pub enum RuntimeError {
     NumberOrStringExpected,
     #[error("Undefined variable.")]
     UndefinedVariable,
+    #[error("Undefined callable.")]
+    UndefinedCallable,
     #[error("Invalid argument.")]
     InvalidArgument,
     #[error("Block expected.")]
