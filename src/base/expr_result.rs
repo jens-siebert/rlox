@@ -1,3 +1,5 @@
+use crate::base::scanner::TokenRef;
+use crate::base::stmt::StmtRef;
 use std::fmt::Display;
 
 #[derive(Clone, PartialEq)]
@@ -5,6 +7,7 @@ pub enum ExprResult {
     Number(f64),
     String(String),
     Boolean(bool),
+    Callable(Callable),
     None,
 }
 
@@ -35,6 +38,14 @@ impl ExprResult {
         Box::new(ExprResult::boolean(value))
     }
 
+    pub fn callable(value: Callable) -> Self {
+        ExprResult::Callable(value)
+    }
+
+    pub fn callable_ref(value: Callable) -> Box<Self> {
+        Box::new(ExprResult::callable(value))
+    }
+
     pub fn none() -> Self {
         ExprResult::None
     }
@@ -50,9 +61,45 @@ impl Display for ExprResult {
             ExprResult::Number(value) => value.to_string(),
             ExprResult::String(value) => value.to_string(),
             ExprResult::Boolean(value) => value.to_string(),
+            ExprResult::Callable(callable) => format!("<fn {}>", callable.name()),
             ExprResult::None => String::from("nil"),
         };
 
         write!(f, "{}", result)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub enum Callable {
+    Function {
+        name: TokenRef,
+        params: Vec<TokenRef>,
+        body: StmtRef,
+    },
+}
+
+impl Callable {
+    pub fn function(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Self {
+        Callable::Function { name, params, body }
+    }
+
+    pub(crate) fn name(&self) -> String {
+        match self {
+            Callable::Function {
+                name,
+                params: _params,
+                body: _body,
+            } => name.lexeme.clone(),
+        }
+    }
+
+    pub(crate) fn arity(&self) -> usize {
+        match self {
+            Callable::Function {
+                name: _name,
+                params,
+                body: _body,
+            } => params.len(),
+        }
     }
 }

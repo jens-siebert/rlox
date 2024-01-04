@@ -1,20 +1,29 @@
 use crate::base::expr::{Expr, ExprRef, LiteralValue};
+use crate::base::expr_result::Callable;
 use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
 use crate::base::visitor::{RuntimeError, Visitor};
 use crate::interpreter::environment::{Environment, EnvironmentRef};
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Interpreter {
-    environment: RefCell<EnvironmentRef>,
+    globals: Rc<RefCell<EnvironmentRef>>,
+    environment: Rc<RefCell<EnvironmentRef>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let env = Rc::new(RefCell::new(Environment::new_ref()));
         Interpreter {
-            environment: RefCell::new(Environment::new_ref()),
+            globals: env.clone(),
+            environment: env.clone(),
         }
+    }
+
+    pub fn globals(&self) -> EnvironmentRef {
+        self.globals.borrow().clone()
     }
 
     fn is_truthy(&self, literal_value: &ExprResultRef) -> bool {
@@ -33,7 +42,7 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn execute_block(
+    pub(crate) fn execute_block(
         &self,
         statements: &Vec<StmtRef>,
         environment: EnvironmentRef,
@@ -135,7 +144,24 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
-            Expr::Call { .. } => todo!(),
+            Expr::Call { callee, arguments } => {
+                let call = self.evaluate(callee)?;
+
+                if let ExprResult::Callable(callable) = *call {
+                    if arguments.len() != callable.arity() {
+                        return Err(RuntimeError::NonMatchingNumberOfArguments);
+                    }
+
+                    let mut args = vec![];
+                    for argument in arguments {
+                        args.push(self.evaluate(argument)?);
+                    }
+
+                    callable.call(self, args)?;
+                }
+
+                Ok(ExprResult::none_ref())
+            }
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
                 LiteralValue::Number(value) => Ok(ExprResult::number_ref(*value)),
@@ -196,7 +222,14 @@ impl Visitor<Stmt, ()> for Interpreter {
                 self.evaluate(expression)?;
                 Ok(())
             }
-            Stmt::Function { name, params, body } => Ok(()),
+            Stmt::Function { name, params, body } => {
+                let callable = Callable::function(name.clone(), params.clone(), body.clone());
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.as_str(), &ExprResult::callable_ref(callable));
+
+                Ok(())
+            }
             Stmt::If {
                 condition,
                 then_branch,
@@ -231,6 +264,38 @@ impl Visitor<Stmt, ()> for Interpreter {
                 }
 
                 Ok(())
+            }
+        }
+    }
+}
+
+impl Callable {
+    fn call(
+        &self,
+        interpreter: &Interpreter,
+        arguments: Vec<ExprResultRef>,
+    ) -> Result<(), RuntimeError> {
+        let mut environment = Environment::new_scope_ref(interpreter.globals());
+
+        match self {
+            Callable::Function {
+                name: _name,
+                params,
+                body,
+            } => {
+                for (i, token) in params.iter().enumerate() {
+                    if let Some(argument) = arguments.get(i) {
+                        environment.define(token.lexeme.as_str(), argument);
+                    } else {
+                        return Err(RuntimeError::InvalidArgument);
+                    }
+                }
+
+                if let Stmt::Block { statements } = *body.clone() {
+                    interpreter.execute_block(&statements, environment)
+                } else {
+                    Err(RuntimeError::BlockExpected)
+                }
             }
         }
     }

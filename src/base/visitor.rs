@@ -10,6 +10,12 @@ pub enum RuntimeError {
     NumberOrStringExpected,
     #[error("Undefined variable.")]
     UndefinedVariable,
+    #[error("Invalid argument.")]
+    InvalidArgument,
+    #[error("Block expected.")]
+    BlockExpected,
+    #[error("Number of arguments does not match number of paramters.")]
+    NonMatchingNumberOfArguments,
 }
 
 pub trait Visitor<I, R> {
