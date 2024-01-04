@@ -46,17 +46,11 @@ impl Interpreter {
         &self,
         statements: &Vec<StmtRef>,
         environment: EnvironmentRef,
-    ) -> Result<ExprResultRef, RuntimeError> {
-        let mut return_value = ExprResult::none_ref();
+    ) -> Result<(), RuntimeError> {
         self.environment.replace(environment);
 
         for statement in statements {
-            self.execute(statement)?;
-            return_value = self.environment.borrow().return_value();
-
-            if ExprResult::None != *return_value {
-                break;
-            }
+            self.execute(statement)?
         }
 
         let enclosing = self.environment.borrow().enclosing();
@@ -64,7 +58,7 @@ impl Interpreter {
             self.environment.replace(e);
         }
 
-        Ok(return_value)
+        Ok(())
     }
 
     pub fn interpret(&self, statements: Vec<StmtRef>) -> Result<(), RuntimeError> {
@@ -163,10 +157,10 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
                         args.push(self.evaluate(argument)?);
                     }
 
-                    callable.call(self, args)
-                } else {
-                    Err(RuntimeError::UndefinedCallable)
+                    callable.call(self, args)?;
                 }
+
+                Ok(ExprResult::none_ref())
             }
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
@@ -221,10 +215,8 @@ impl Visitor<Stmt, ()> for Interpreter {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
-                let current_scope = self.environment.borrow().clone();
-                self.execute_block(statements, Environment::new_scope_ref(current_scope))?;
-
-                Ok(())
+                let old_scope = self.environment.borrow().clone();
+                self.execute_block(statements, Environment::new_scope_ref(old_scope))
             }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
@@ -259,13 +251,11 @@ impl Visitor<Stmt, ()> for Interpreter {
             Stmt::Print { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
-
                 Ok(())
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
                 self.environment.borrow_mut().define(&name.lexeme, &value);
-
                 Ok(())
             }
             Stmt::While { condition, body } => {
@@ -284,7 +274,7 @@ impl Callable {
         &self,
         interpreter: &Interpreter,
         arguments: Vec<ExprResultRef>,
-    ) -> Result<ExprResultRef, RuntimeError> {
+    ) -> Result<(), RuntimeError> {
         let mut environment = Environment::new_scope_ref(interpreter.globals());
 
         match self {

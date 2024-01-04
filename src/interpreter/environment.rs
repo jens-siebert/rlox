@@ -1,4 +1,4 @@
-use crate::base::expr_result::{ExprResult, ExprResultRef};
+use crate::base::expr_result::ExprResultRef;
 use crate::base::visitor::RuntimeError;
 use std::collections::HashMap;
 
@@ -6,7 +6,6 @@ use std::collections::HashMap;
 pub struct Environment {
     enclosing: Option<EnvironmentRef>,
     values: HashMap<String, ExprResultRef>,
-    return_value: ExprResultRef,
 }
 
 pub type EnvironmentRef = Box<Environment>;
@@ -16,7 +15,6 @@ impl Environment {
         Environment {
             enclosing: None,
             values: HashMap::new(),
-            return_value: ExprResult::none_ref(),
         }
     }
 
@@ -28,7 +26,6 @@ impl Environment {
         Environment {
             enclosing: Some(enclosing),
             values: HashMap::new(),
-            return_value: ExprResult::none_ref(),
         }
     }
 
@@ -38,10 +35,6 @@ impl Environment {
 
     pub(crate) fn enclosing(&self) -> Option<EnvironmentRef> {
         self.enclosing.clone()
-    }
-
-    pub(crate) fn return_value(&self) -> ExprResultRef {
-        self.return_value.clone()
     }
 
     pub(crate) fn define(&mut self, name: &str, value: &ExprResultRef) {
