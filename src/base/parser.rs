@@ -1,7 +1,8 @@
 use crate::base::expr::{Expr, ExprRef, LiteralValue};
-use crate::base::scanner::{Token, TokenType};
+use crate::base::scanner::{TokenRef, TokenType};
 use crate::base::stmt::{Stmt, StmtRef};
 use std::cell::RefCell;
+use std::rc::Rc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -50,13 +51,13 @@ pub enum ParserError {
     InvalidAssignmentTarget,
 }
 
-pub struct Parser<'a> {
-    pub tokens: &'a Vec<Token>,
+pub struct Parser {
+    pub tokens: Rc<Vec<TokenRef>>,
     pub current: RefCell<usize>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> Self {
+impl Parser {
+    pub fn new(tokens: Rc<Vec<TokenRef>>) -> Self {
         Parser {
             tokens,
             current: RefCell::new(0),
@@ -89,7 +90,7 @@ impl<'a> Parser<'a> {
             ParserError::MissingLeftParenthesisAfterFunctionName,
         )?;
 
-        let mut parameters: Vec<&Token> = vec![];
+        let mut parameters = vec![];
 
         if !self.check(&TokenType::RightParen)? {
             loop {
@@ -448,28 +449,28 @@ impl<'a> Parser<'a> {
         Err(ParserError::MissingExpression)
     }
 
-    fn peek(&self) -> Result<&Token, ParserError> {
+    fn peek(&self) -> Result<TokenRef, ParserError> {
         match self.tokens.get(*self.current.borrow()) {
             None => Err(ParserError::TokenReadError),
-            Some(token) => Ok(token),
+            Some(token) => Ok(token.clone()),
         }
     }
 
-    fn previous(&self) -> Result<&Token, ParserError> {
+    fn previous(&self) -> Result<TokenRef, ParserError> {
         match self.tokens.get(*self.current.borrow() - 1) {
             None => Err(ParserError::TokenReadError),
-            Some(token) => Ok(token),
+            Some(token) => Ok(token.clone()),
         }
     }
 
-    fn advance(&self) -> Result<&Token, ParserError> {
+    fn advance(&self) -> Result<TokenRef, ParserError> {
         if !self.is_at_end()? {
             *self.current.borrow_mut() += 1
         }
         self.previous()
     }
 
-    fn consume(&self, token_type: TokenType, error: ParserError) -> Result<&Token, ParserError> {
+    fn consume(&self, token_type: TokenType, error: ParserError) -> Result<TokenRef, ParserError> {
         if self.check(&token_type)? {
             self.advance()
         } else {

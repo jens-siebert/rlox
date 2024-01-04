@@ -1,4 +1,4 @@
-use crate::base::scanner::Token;
+use crate::base::scanner::TokenRef;
 use crate::base::visitor::{RuntimeError, Visitor};
 
 pub enum LiteralValue {
@@ -8,44 +8,44 @@ pub enum LiteralValue {
     None,
 }
 
-pub enum Expr<'a> {
+pub enum Expr {
     Binary {
-        left: ExprRef<'a>,
-        operator: &'a Token,
-        right: ExprRef<'a>,
+        left: ExprRef,
+        operator: TokenRef,
+        right: ExprRef,
     },
     Call {
-        callee: ExprRef<'a>,
-        arguments: Vec<ExprRef<'a>>,
+        callee: ExprRef,
+        arguments: Vec<ExprRef>,
     },
     Grouping {
-        expression: ExprRef<'a>,
+        expression: ExprRef,
     },
     Literal {
         value: LiteralValue,
     },
     Logical {
-        left: ExprRef<'a>,
-        operator: &'a Token,
-        right: ExprRef<'a>,
+        left: ExprRef,
+        operator: TokenRef,
+        right: ExprRef,
     },
     Unary {
-        operator: &'a Token,
-        right: ExprRef<'a>,
+        operator: TokenRef,
+        right: ExprRef,
     },
     Variable {
-        name: &'a Token,
+        name: TokenRef,
     },
     Assign {
-        name: &'a Token,
-        value: ExprRef<'a>,
+        name: TokenRef,
+        value: ExprRef,
     },
 }
 
-pub type ExprRef<'a> = Box<Expr<'a>>;
+pub type ExprRef = Box<Expr>;
 
-impl<'a> Expr<'a> {
-    pub fn binary(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+impl Expr {
+    pub fn binary(left: ExprRef, operator: TokenRef, right: ExprRef) -> Self {
         Expr::Binary {
             left,
             operator,
@@ -53,35 +53,35 @@ impl<'a> Expr<'a> {
         }
     }
 
-    pub fn binary_ref(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
+    pub fn binary_ref(left: ExprRef, operator: TokenRef, right: ExprRef) -> Box<Self> {
         Box::new(Expr::binary(left, operator, right))
     }
 
-    pub fn call(callee: ExprRef<'a>, arguments: Vec<ExprRef<'a>>) -> Expr<'a> {
+    pub fn call(callee: ExprRef, arguments: Vec<ExprRef>) -> Self {
         Expr::Call { callee, arguments }
     }
 
-    pub fn call_ref(callee: ExprRef<'a>, arguments: Vec<ExprRef<'a>>) -> ExprRef<'a> {
+    pub fn call_ref(callee: ExprRef, arguments: Vec<ExprRef>) -> Box<Self> {
         Box::new(Expr::call(callee, arguments))
     }
 
-    pub fn grouping(expression: ExprRef) -> Expr {
+    pub fn grouping(expression: ExprRef) -> Self {
         Expr::Grouping { expression }
     }
 
-    pub fn grouping_ref(expression: ExprRef) -> ExprRef {
+    pub fn grouping_ref(expression: ExprRef) -> Box<Self> {
         Box::new(Expr::grouping(expression))
     }
 
-    pub fn literal(value: LiteralValue) -> Expr<'a> {
+    pub fn literal(value: LiteralValue) -> Self {
         Expr::Literal { value }
     }
 
-    pub fn literal_ref(value: LiteralValue) -> ExprRef<'a> {
+    pub fn literal_ref(value: LiteralValue) -> Box<Self> {
         Box::new(Expr::literal(value))
     }
 
-    pub fn logical(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+    pub fn logical(left: ExprRef, operator: TokenRef, right: ExprRef) -> Self {
         Expr::Logical {
             left,
             operator,
@@ -89,38 +89,35 @@ impl<'a> Expr<'a> {
         }
     }
 
-    pub fn logical_ref(left: ExprRef<'a>, operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
+    pub fn logical_ref(left: ExprRef, operator: TokenRef, right: ExprRef) -> Box<Self> {
         Box::new(Expr::logical(left, operator, right))
     }
 
-    pub fn unary(operator: &'a Token, right: ExprRef<'a>) -> Expr<'a> {
+    pub fn unary(operator: TokenRef, right: ExprRef) -> Self {
         Expr::Unary { operator, right }
     }
 
-    pub fn unary_ref(operator: &'a Token, right: ExprRef<'a>) -> ExprRef<'a> {
+    pub fn unary_ref(operator: TokenRef, right: ExprRef) -> Box<Self> {
         Box::new(Expr::unary(operator, right))
     }
 
-    pub fn variable(name: &'a Token) -> Expr<'a> {
+    pub fn variable(name: TokenRef) -> Self {
         Expr::Variable { name }
     }
 
-    pub fn variable_ref(name: &'a Token) -> ExprRef<'a> {
+    pub fn variable_ref(name: TokenRef) -> Box<Self> {
         Box::new(Expr::variable(name))
     }
 
-    pub fn assign(name: &'a Token, value: ExprRef<'a>) -> Expr<'a> {
+    pub fn assign(name: TokenRef, value: ExprRef) -> Self {
         Expr::Assign { name, value }
     }
 
-    pub fn assign_ref(name: &'a Token, value: ExprRef<'a>) -> ExprRef<'a> {
+    pub fn assign_ref(name: TokenRef, value: ExprRef) -> Box<Self> {
         Box::new(Expr::assign(name, value))
     }
 
-    pub fn accept<R>(
-        &self,
-        visitor: &'a (dyn Visitor<Expr<'a>, R> + 'a),
-    ) -> Result<R, RuntimeError> {
+    pub fn accept<R>(&self, visitor: &dyn Visitor<Expr, R>) -> Result<R, RuntimeError> {
         visitor.visit(self)
     }
 }

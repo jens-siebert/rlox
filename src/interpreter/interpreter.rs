@@ -67,8 +67,8 @@ impl Default for Interpreter {
     }
 }
 
-impl Visitor<Expr<'_>, ExprResultRef> for Interpreter {
-    fn visit(&self, input: &Expr<'_>) -> Result<ExprResultRef, RuntimeError> {
+impl Visitor<Expr, ExprResultRef> for Interpreter {
+    fn visit(&self, input: &Expr) -> Result<ExprResultRef, RuntimeError> {
         match input {
             Expr::Binary {
                 left,
@@ -185,7 +185,7 @@ impl Visitor<Expr<'_>, ExprResultRef> for Interpreter {
     }
 }
 
-impl Visitor<Stmt<'_>, ()> for Interpreter {
+impl Visitor<Stmt, ()> for Interpreter {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {

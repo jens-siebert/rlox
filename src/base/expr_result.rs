@@ -45,7 +45,7 @@ impl ExprResult {
 }
 
 impl Display for ExprResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let result = match self {
             ExprResult::Number(value) => value.to_string(),
             ExprResult::String(value) => value.to_string(),

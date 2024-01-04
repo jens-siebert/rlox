@@ -1,69 +1,65 @@
 use crate::base::expr::ExprRef;
-use crate::base::scanner::Token;
+use crate::base::scanner::TokenRef;
 use crate::base::visitor::{RuntimeError, Visitor};
 
-pub enum Stmt<'a> {
+pub enum Stmt {
     Block {
-        statements: Vec<StmtRef<'a>>,
+        statements: Vec<StmtRef>,
     },
     Expression {
-        expression: ExprRef<'a>,
+        expression: ExprRef,
     },
     Function {
-        name: &'a Token,
-        params: Vec<&'a Token>,
-        body: StmtRef<'a>,
+        name: TokenRef,
+        params: Vec<TokenRef>,
+        body: StmtRef,
     },
     If {
-        condition: ExprRef<'a>,
-        then_branch: StmtRef<'a>,
-        else_branch: Option<StmtRef<'a>>,
+        condition: ExprRef,
+        then_branch: StmtRef,
+        else_branch: Option<StmtRef>,
     },
     Print {
-        expression: ExprRef<'a>,
+        expression: ExprRef,
     },
     Var {
-        name: &'a Token,
-        initializer: ExprRef<'a>,
+        name: TokenRef,
+        initializer: ExprRef,
     },
     While {
-        condition: ExprRef<'a>,
-        body: StmtRef<'a>,
+        condition: ExprRef,
+        body: StmtRef,
     },
 }
 
-pub type StmtRef<'a> = Box<Stmt<'a>>;
+pub type StmtRef = Box<Stmt>;
 
-impl<'a> Stmt<'a> {
-    pub fn block(statements: Vec<StmtRef>) -> Stmt {
+impl Stmt {
+    pub fn block(statements: Vec<StmtRef>) -> Self {
         Stmt::Block { statements }
     }
 
-    pub fn block_ref(statements: Vec<StmtRef>) -> StmtRef {
+    pub fn block_ref(statements: Vec<StmtRef>) -> Box<Self> {
         Box::new(Stmt::block(statements))
     }
 
-    pub fn expression(expression: ExprRef) -> Stmt {
-        Stmt::Expression { expression }
-    }
-
-    pub fn function(name: &'a Token, params: Vec<&'a Token>, body: StmtRef<'a>) -> Stmt<'a> {
+    pub fn function(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Self {
         Stmt::Function { name, params, body }
     }
 
-    pub fn function_ref(name: &'a Token, params: Vec<&'a Token>, body: StmtRef<'a>) -> StmtRef<'a> {
+    pub fn function_ref(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Box<Self> {
         Box::new(Stmt::function(name, params, body))
     }
 
-    pub fn expression_ref(expression: ExprRef) -> StmtRef {
+    pub fn expression(expression: ExprRef) -> Self {
+        Stmt::Expression { expression }
+    }
+
+    pub fn expression_ref(expression: ExprRef) -> Box<Self> {
         Box::new(Stmt::expression(expression))
     }
 
-    pub fn if_stmt(
-        condition: ExprRef<'a>,
-        then_branch: StmtRef<'a>,
-        else_branch: Option<StmtRef<'a>>,
-    ) -> Stmt<'a> {
+    pub fn if_stmt(condition: ExprRef, then_branch: StmtRef, else_branch: Option<StmtRef>) -> Self {
         Stmt::If {
             condition,
             then_branch,
@@ -72,38 +68,38 @@ impl<'a> Stmt<'a> {
     }
 
     pub fn if_stmt_ref(
-        condition: ExprRef<'a>,
-        then_branch: StmtRef<'a>,
-        else_branch: Option<StmtRef<'a>>,
-    ) -> StmtRef<'a> {
+        condition: ExprRef,
+        then_branch: StmtRef,
+        else_branch: Option<StmtRef>,
+    ) -> Box<Self> {
         Box::new(Stmt::if_stmt(condition, then_branch, else_branch))
     }
 
-    pub fn print(expression: ExprRef) -> Stmt {
+    pub fn print(expression: ExprRef) -> Self {
         Stmt::Print { expression }
     }
 
-    pub fn print_ref(expression: ExprRef) -> StmtRef {
+    pub fn print_ref(expression: ExprRef) -> Box<Self> {
         Box::new(Stmt::print(expression))
     }
 
-    pub fn var(name: &'a Token, initializer: ExprRef<'a>) -> Stmt<'a> {
+    pub fn var(name: TokenRef, initializer: ExprRef) -> Self {
         Stmt::Var { name, initializer }
     }
 
-    pub fn var_ref(name: &'a Token, initializer: ExprRef<'a>) -> StmtRef<'a> {
+    pub fn var_ref(name: TokenRef, initializer: ExprRef) -> Box<Self> {
         Box::new(Stmt::var(name, initializer))
     }
 
-    pub fn while_stmt(condition: ExprRef<'a>, body: StmtRef<'a>) -> Stmt<'a> {
+    pub fn while_stmt(condition: ExprRef, body: StmtRef) -> Self {
         Stmt::While { condition, body }
     }
 
-    pub fn while_stmt_ref(condition: ExprRef<'a>, body: StmtRef<'a>) -> StmtRef<'a> {
+    pub fn while_stmt_ref(condition: ExprRef, body: StmtRef) -> Box<Self> {
         Box::new(Stmt::while_stmt(condition, body))
     }
 
-    pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt<'a>, R>) -> Result<R, RuntimeError> {
+    pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt, R>) -> Result<R, RuntimeError> {
         visitor.visit(self)
     }
 }
