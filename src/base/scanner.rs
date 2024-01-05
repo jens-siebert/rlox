@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,

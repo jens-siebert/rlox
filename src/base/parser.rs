@@ -92,7 +92,7 @@ impl Parser {
 
         let mut parameters = vec![];
 
-        if !self.check(&TokenType::RightParen)? {
+        if !self.check(TokenType::RightParen)? {
             loop {
                 let parameter =
                     self.consume(TokenType::Identifier, ParserError::MissingParameterName)?;
@@ -165,7 +165,7 @@ impl Parser {
             Some(self.expression_statement()?)
         };
 
-        let condition = if !self.check(&TokenType::Semicolon)? {
+        let condition = if !self.check(TokenType::Semicolon)? {
             self.expression()?
         } else {
             Expr::literal_ref(LiteralValue::Boolean(true))
@@ -176,7 +176,7 @@ impl Parser {
             ParserError::MissingSemicolonAfterLoopCondition,
         )?;
 
-        let increment = if !self.check(&TokenType::RightParen)? {
+        let increment = if !self.check(TokenType::RightParen)? {
             Some(self.expression()?)
         } else {
             None
@@ -253,7 +253,7 @@ impl Parser {
     fn block(&self) -> Result<StmtRef, ParserError> {
         let mut statements: Vec<StmtRef> = vec![];
 
-        while !self.check(&TokenType::RightBrace)? && !self.is_at_end()? {
+        while !self.check(TokenType::RightBrace)? && !self.is_at_end()? {
             statements.push(self.declaration()?)
         }
 
@@ -386,7 +386,7 @@ impl Parser {
         loop {
             if self.match_token_types(&[TokenType::LeftParen])? {
                 let mut arguments: Vec<ExprRef> = vec![];
-                if !self.check(&TokenType::RightParen)? {
+                if !self.check(TokenType::RightParen)? {
                     loop {
                         arguments.push(self.expression()?);
 
@@ -471,7 +471,7 @@ impl Parser {
     }
 
     fn consume(&self, token_type: TokenType, error: ParserError) -> Result<TokenRef, ParserError> {
-        if self.check(&token_type)? {
+        if self.check(token_type)? {
             self.advance()
         } else {
             Err(error)
@@ -485,12 +485,12 @@ impl Parser {
         }
     }
 
-    fn check(&self, token_type: &TokenType) -> Result<bool, ParserError> {
+    fn check(&self, token_type: TokenType) -> Result<bool, ParserError> {
         if self.is_at_end()? {
             Ok(false)
         } else {
             match self.peek() {
-                Ok(token) => Ok(token.token_type == *token_type),
+                Ok(token) => Ok(token.token_type == token_type),
                 Err(err) => Err(err),
             }
         }
@@ -498,7 +498,7 @@ impl Parser {
 
     fn match_token_types(&self, token_types: &[TokenType]) -> Result<bool, ParserError> {
         for token_type in token_types {
-            if self.check(token_type)? {
+            if self.check(token_type.clone())? {
                 self.advance()?;
                 return Ok(true);
             }
