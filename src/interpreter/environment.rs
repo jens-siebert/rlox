@@ -1,47 +1,54 @@
 use crate::base::expr_result::ExprResultRef;
 use crate::base::visitor::RuntimeError;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
-type EnvironmentData = HashMap<String, ExprResultRef>;
-
+#[derive(Clone)]
 pub struct Environment {
-    store: VecDeque<EnvironmentData>,
+    enclosing: Option<EnvironmentRef>,
+    values: HashMap<String, ExprResultRef>,
 }
 
-impl Environment {
-    pub(crate) fn new() -> Self {
-        let mut initial_store = VecDeque::new();
-        initial_store.push_front(EnvironmentData::new());
+pub type EnvironmentRef = Box<Environment>;
 
+impl Environment {
+    fn new() -> Self {
         Environment {
-            store: initial_store,
+            enclosing: None,
+            values: HashMap::new(),
         }
     }
 
-    pub(crate) fn push_scope(&mut self) {
-        self.store.push_front(EnvironmentData::new())
+    pub(crate) fn new_ref() -> Box<Self> {
+        Box::new(Environment::new())
     }
 
-    pub(crate) fn pop_scope(&mut self) -> Option<EnvironmentData> {
-        self.store.pop_front()
+    fn new_scope(enclosing: EnvironmentRef) -> Self {
+        Environment {
+            enclosing: Some(enclosing),
+            values: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn new_scope_ref(enclosing: EnvironmentRef) -> EnvironmentRef {
+        Box::new(Environment::new_scope(enclosing))
+    }
+
+    pub(crate) fn enclosing(&self) -> Option<EnvironmentRef> {
+        self.enclosing.clone()
     }
 
     pub(crate) fn define(&mut self, name: &str, value: &ExprResultRef) {
-        if let Some(environment) = self.store.front_mut() {
-            environment.insert(name.to_string(), value.clone());
-        }
+        self.values.insert(name.to_string(), value.clone());
     }
 
     pub(crate) fn get(&self, name: &String) -> Result<ExprResultRef, RuntimeError> {
-        for environment in &self.store {
-            if environment.contains_key(name) {
-                if let Some(value) = environment.get(name) {
-                    return Ok(value.clone());
-                }
-            }
+        match self.values.get(name) {
+            None => match &self.enclosing {
+                None => Err(RuntimeError::UndefinedVariable),
+                Some(scope) => scope.get(name),
+            },
+            Some(value) => Ok(value.clone()),
         }
-
-        Err(RuntimeError::UndefinedVariable)
     }
 
     pub(crate) fn assign(
@@ -49,12 +56,14 @@ impl Environment {
         name: &String,
         value: &ExprResultRef,
     ) -> Result<(), RuntimeError> {
-        for environment in &mut self.store {
-            if environment.contains_key(name) {
-                environment.insert(name.clone(), value.clone());
+        if self.values.contains_key(name) {
+            self.values.insert(name.clone(), value.clone());
+            Ok(())
+        } else {
+            match &mut self.enclosing {
+                None => Err(RuntimeError::UndefinedVariable),
+                Some(scope) => scope.assign(name, value),
             }
         }
-
-        Err(RuntimeError::UndefinedVariable)
     }
 }
