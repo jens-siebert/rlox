@@ -40,8 +40,12 @@ impl Environment {
         self.enclosing.clone()
     }
 
-    pub(crate) fn return_value(&self) -> ExprResultRef {
+    pub(crate) fn get_return_value(&self) -> ExprResultRef {
         self.return_value.clone()
+    }
+
+    pub(crate) fn set_return_value(&mut self, value: ExprResultRef) {
+        self.return_value = value
     }
 
     pub(crate) fn define(&mut self, name: &str, value: &ExprResultRef) {

@@ -52,7 +52,7 @@ impl Interpreter {
 
         for statement in statements {
             self.execute(statement)?;
-            return_value = self.environment.borrow().return_value();
+            return_value = self.environment.borrow().get_return_value();
 
             if ExprResult::None != *return_value {
                 break;
@@ -259,6 +259,14 @@ impl Visitor<Stmt, ()> for Interpreter {
             Stmt::Print { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
+
+                Ok(())
+            }
+            Stmt::Return { value } => {
+                if let Some(expr) = value {
+                    let result = self.evaluate(expr)?;
+                    self.environment.borrow_mut().set_return_value(result);
+                }
 
                 Ok(())
             }

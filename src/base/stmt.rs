@@ -23,6 +23,9 @@ pub enum Stmt {
     Print {
         expression: ExprRef,
     },
+    Return {
+        value: Option<ExprRef>,
+    },
     Var {
         name: TokenRef,
         initializer: ExprRef,
@@ -82,6 +85,14 @@ impl Stmt {
 
     pub fn print_ref(expression: ExprRef) -> Box<Self> {
         Box::new(Stmt::print(expression))
+    }
+
+    pub fn return_stmt(value: Option<ExprRef>) -> Self {
+        Stmt::Return { value }
+    }
+
+    pub fn return_stmt_ref(value: Option<ExprRef>) -> Box<Self> {
+        Box::new(Stmt::return_stmt(value))
     }
 
     pub fn var(name: TokenRef, initializer: ExprRef) -> Self {

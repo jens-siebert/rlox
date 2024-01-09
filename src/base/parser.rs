@@ -142,6 +142,8 @@ impl Parser {
             self.if_statement()
         } else if self.match_token_types(&[TokenType::Print])? {
             self.print_statement()
+        } else if self.match_token_types(&[TokenType::Return])? {
+            self.return_statement()
         } else if self.match_token_types(&[TokenType::While])? {
             self.while_statement()
         } else if self.match_token_types(&[TokenType::LeftBrace])? {
@@ -231,6 +233,21 @@ impl Parser {
             ParserError::MissingSemicolonAfterValue,
         )?;
         Ok(Stmt::print_ref(value))
+    }
+
+    fn return_statement(&self) -> Result<StmtRef, ParserError> {
+        let expr = if !self.check(TokenType::Semicolon)? {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            TokenType::Semicolon,
+            ParserError::MissingSemicolonAfterExpression,
+        )?;
+
+        Ok(Stmt::return_stmt_ref(expr))
     }
 
     fn while_statement(&self) -> Result<StmtRef, ParserError> {
