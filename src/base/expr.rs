@@ -1,5 +1,4 @@
 use crate::base::scanner::TokenRef;
-use crate::base::visitor::{RuntimeError, Visitor};
 
 #[derive(Clone, PartialEq)]
 pub enum LiteralValue {
@@ -117,9 +116,5 @@ impl Expr {
 
     pub fn assign_ref(name: TokenRef, value: ExprRef) -> Box<Self> {
         Box::new(Expr::assign(name, value))
-    }
-
-    pub fn accept<R>(&self, visitor: &dyn Visitor<Expr, R>) -> Result<R, RuntimeError> {
-        visitor.visit(self)
     }
 }
