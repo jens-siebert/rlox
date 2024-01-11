@@ -1,5 +1,6 @@
 use crate::base::expr::ExprRef;
 use crate::base::scanner::TokenRef;
+use crate::base::visitor::{RuntimeError, Visitor};
 
 #[derive(Clone, PartialEq)]
 pub enum Stmt {
@@ -108,5 +109,9 @@ impl Stmt {
 
     pub fn while_stmt_ref(condition: ExprRef, body: StmtRef) -> Box<Self> {
         Box::new(Stmt::while_stmt(condition, body))
+    }
+
+    pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt, R>) -> Result<R, RuntimeError> {
+        visitor.visit(self)
     }
 }

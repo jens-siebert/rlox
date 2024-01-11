@@ -3,4 +3,4 @@ fun count(n) {
   print n;
 }
 
-count(900);
+count(1000);
