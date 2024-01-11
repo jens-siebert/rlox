@@ -4,26 +4,19 @@ use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
 use crate::base::visitor::{RuntimeError, Visitor};
-use crate::interpreter::environment::{Environment, EnvironmentRef};
+use crate::interpreter::environment::Environment;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    globals: Rc<RefCell<EnvironmentRef>>,
-    environment: Rc<RefCell<EnvironmentRef>>,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let env = Rc::new(RefCell::new(Environment::new_ref()));
         Interpreter {
-            globals: env.clone(),
-            environment: env.clone(),
+            environment: Rc::new(RefCell::new(Environment::default())),
         }
-    }
-
-    pub fn globals(&self) -> EnvironmentRef {
-        self.globals.borrow().clone()
     }
 
     fn is_truthy(&self, literal_value: &ExprResultRef) -> bool {
@@ -45,10 +38,9 @@ impl Interpreter {
     pub(crate) fn execute_block(
         &self,
         statements: &Vec<StmtRef>,
-        environment: EnvironmentRef,
     ) -> Result<ExprResultRef, RuntimeError> {
         let mut return_value = ExprResult::none_ref();
-        self.environment.replace(environment);
+        self.environment.borrow_mut().push_scope();
 
         for statement in statements {
             self.execute(statement)?;
@@ -59,10 +51,7 @@ impl Interpreter {
             }
         }
 
-        let enclosing = self.environment.borrow().enclosing();
-        if let Some(e) = enclosing {
-            self.environment.replace(e);
-        }
+        self.environment.borrow_mut().pop_scope();
 
         Ok(return_value)
     }
@@ -221,8 +210,7 @@ impl Visitor<Stmt, ()> for Interpreter {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
-                let current_scope = self.environment.borrow().clone();
-                self.execute_block(statements, Environment::new_scope_ref(current_scope))?;
+                self.execute_block(statements)?;
 
                 Ok(())
             }
@@ -234,7 +222,7 @@ impl Visitor<Stmt, ()> for Interpreter {
                 let callable = Callable::function(name.clone(), params.clone(), body.clone());
                 self.environment
                     .borrow_mut()
-                    .define(name.lexeme.as_str(), &ExprResult::callable_ref(callable));
+                    .define(name.lexeme.as_str(), ExprResult::callable_ref(callable));
 
                 Ok(())
             }
@@ -272,7 +260,7 @@ impl Visitor<Stmt, ()> for Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
-                self.environment.borrow_mut().define(&name.lexeme, &value);
+                self.environment.borrow_mut().define(&name.lexeme, value);
 
                 Ok(())
             }
@@ -293,27 +281,34 @@ impl Callable {
         interpreter: &Interpreter,
         arguments: Vec<ExprResultRef>,
     ) -> Result<ExprResultRef, RuntimeError> {
-        let mut environment = Environment::new_scope_ref(interpreter.globals());
-
         match self {
             Callable::Function {
                 name: _name,
                 params,
                 body,
             } => {
+                interpreter.environment.borrow_mut().push_scope();
+
                 for (i, token) in params.iter().enumerate() {
                     if let Some(argument) = arguments.get(i) {
-                        environment.define(token.lexeme.as_str(), argument);
+                        interpreter
+                            .environment
+                            .borrow_mut()
+                            .define(token.lexeme.as_str(), argument.clone());
                     } else {
                         return Err(RuntimeError::InvalidArgument);
                     }
                 }
 
-                if let Stmt::Block { statements } = *body.clone() {
-                    interpreter.execute_block(&statements, environment)
+                let return_value = if let Stmt::Block { statements } = *body.clone() {
+                    interpreter.execute_block(&statements)
                 } else {
                     Err(RuntimeError::BlockExpected)
-                }
+                };
+
+                interpreter.environment.borrow_mut().pop_scope();
+
+                return_value
             }
         }
     }

@@ -1,5 +1,6 @@
-fun add(a,b) {
-   return a+b;
+fun count(n) {
+  if (n > 1) count(n - 1);
+  print n;
 }
 
-print add(1,2);
+count(1000);

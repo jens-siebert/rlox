@@ -2,12 +2,13 @@ use crate::base::scanner::TokenRef;
 use crate::base::stmt::StmtRef;
 use std::fmt::Display;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub enum ExprResult {
     Number(f64),
     String(String),
     Boolean(bool),
     Callable(Callable),
+    #[default]
     None,
 }
 
