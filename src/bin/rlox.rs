@@ -12,7 +12,7 @@ struct LoxEnvironment {
 impl LoxEnvironment {
     fn new() -> Self {
         LoxEnvironment {
-            interpreter: Interpreter::default(),
+            interpreter: Interpreter::new(),
         }
     }
 

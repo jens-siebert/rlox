@@ -3,42 +3,36 @@ use crate::base::expr_result::Callable;
 use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
+use crate::base::visitor::{RuntimeError, Visitor};
 use crate::interpreter::environment::Environment;
 use std::cell::RefCell;
 use std::rc::Rc;
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum RuntimeError {
-    #[error("Invalid value.")]
-    InvalidValue,
-    #[error("Number expected.")]
-    NumberExpected,
-    #[error("Number or String expected.")]
-    NumberOrStringExpected,
-    #[error("Undefined variable.")]
-    UndefinedVariable,
-    #[error("Undefined callable.")]
-    UndefinedCallable,
-    #[error("Invalid argument.")]
-    InvalidArgument,
-    #[error("Block expected.")]
-    BlockExpected,
-    #[error("Number of arguments does not match number of paramters.")]
-    NonMatchingNumberOfArguments,
-}
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter {
+            environment: Rc::new(RefCell::new(Environment::default())),
+        }
+    }
+
     fn is_truthy(&self, literal_value: &ExprResultRef) -> bool {
         match **literal_value {
             ExprResult::Boolean(value) => value,
             ExprResult::None => false,
             _ => true,
         }
+    }
+
+    fn evaluate(&self, expr: &ExprRef) -> Result<ExprResultRef, RuntimeError> {
+        expr.accept(self)
+    }
+
+    fn execute(&self, stmt: &StmtRef) -> Result<(), RuntimeError> {
+        stmt.accept(self)
     }
 
     pub(crate) fn execute_block(
@@ -69,83 +63,24 @@ impl Interpreter {
 
         Ok(())
     }
+}
 
-    fn execute(&self, stmt: &StmtRef) -> Result<(), RuntimeError> {
-        match *stmt.clone() {
-            Stmt::Block { statements } => {
-                self.execute_block(&statements)?;
-
-                Ok(())
-            }
-            Stmt::Expression { expression } => {
-                self.evaluate(&expression)?;
-                Ok(())
-            }
-            Stmt::Function { name, params, body } => {
-                let callable = Callable::function(name.clone(), params.clone(), body.clone());
-                self.environment
-                    .borrow_mut()
-                    .define(name.lexeme.as_str(), ExprResult::callable_ref(callable));
-
-                Ok(())
-            }
-            Stmt::If {
-                condition,
-                then_branch,
-                else_branch,
-            } => {
-                let condition_result = self.evaluate(&condition)?;
-
-                if self.is_truthy(&condition_result) {
-                    self.execute(&then_branch)?
-                } else {
-                    match else_branch {
-                        None => {}
-                        Some(branch) => self.execute(&branch)?,
-                    }
-                }
-
-                Ok(())
-            }
-            Stmt::Print { expression } => {
-                let value = self.evaluate(&expression)?;
-                println!("{}", value);
-
-                Ok(())
-            }
-            Stmt::Return { value } => {
-                if let Some(expr) = value {
-                    let result = self.evaluate(&expr)?;
-                    self.environment.borrow_mut().set_return_value(result);
-                }
-
-                Ok(())
-            }
-            Stmt::Var { name, initializer } => {
-                let value = self.evaluate(&initializer)?;
-                self.environment.borrow_mut().define(&name.lexeme, value);
-
-                Ok(())
-            }
-            Stmt::While { condition, body } => {
-                while self.is_truthy(&self.evaluate(&condition)?) {
-                    self.execute(&body)?;
-                }
-
-                Ok(())
-            }
-        }
+impl Default for Interpreter {
+    fn default() -> Self {
+        Interpreter::new()
     }
+}
 
-    fn evaluate(&self, expr: &ExprRef) -> Result<ExprResultRef, RuntimeError> {
-        match *expr.clone() {
+impl Visitor<Expr, ExprResultRef> for Interpreter {
+    fn visit(&self, input: &Expr) -> Result<ExprResultRef, RuntimeError> {
+        match input {
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = self.evaluate(&left)?;
-                let right = self.evaluate(&right)?;
+                let left = self.evaluate(left)?;
+                let right = self.evaluate(right)?;
 
                 match &operator.token_type {
                     TokenType::Greater => match (*left, *right) {
@@ -205,7 +140,7 @@ impl Interpreter {
                 }
             }
             Expr::Call { callee, arguments } => {
-                let call = self.evaluate(&callee)?;
+                let call = self.evaluate(callee)?;
 
                 if let ExprResult::Callable(callable) = *call {
                     if arguments.len() != callable.arity() {
@@ -214,7 +149,7 @@ impl Interpreter {
 
                     let mut args = vec![];
                     for argument in arguments {
-                        args.push(self.evaluate(&argument)?);
+                        args.push(self.evaluate(argument)?);
                     }
 
                     callable.call(self, args)
@@ -222,11 +157,11 @@ impl Interpreter {
                     Err(RuntimeError::UndefinedCallable)
                 }
             }
-            Expr::Grouping { expression } => self.evaluate(&expression),
+            Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
-                LiteralValue::Number(value) => Ok(ExprResult::number_ref(value)),
+                LiteralValue::Number(value) => Ok(ExprResult::number_ref(*value)),
                 LiteralValue::String(value) => Ok(ExprResult::string_ref(value.clone())),
-                LiteralValue::Boolean(value) => Ok(ExprResult::boolean_ref(value)),
+                LiteralValue::Boolean(value) => Ok(ExprResult::boolean_ref(*value)),
                 LiteralValue::None => Ok(ExprResult::none_ref()),
             },
             Expr::Logical {
@@ -234,7 +169,7 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left_expr = self.evaluate(&left)?;
+                let left_expr = self.evaluate(left)?;
 
                 if operator.token_type == TokenType::Or {
                     if self.is_truthy(&left_expr) {
@@ -244,10 +179,10 @@ impl Interpreter {
                     return Ok(left_expr);
                 }
 
-                self.evaluate(&right)
+                self.evaluate(right)
             }
             Expr::Unary { operator, right } => {
-                let right = self.evaluate(&right)?;
+                let right = self.evaluate(right)?;
 
                 match &operator.token_type {
                     TokenType::Minus => match *right {
@@ -263,7 +198,7 @@ impl Interpreter {
                 Err(_) => Err(RuntimeError::UndefinedVariable),
             },
             Expr::Assign { name, value } => {
-                let v = self.evaluate(&value)?;
+                let v = self.evaluate(value)?;
                 self.environment.borrow_mut().assign(&name.lexeme, &v)?;
                 Ok(v)
             }
@@ -271,10 +206,71 @@ impl Interpreter {
     }
 }
 
-impl Default for Interpreter {
-    fn default() -> Self {
-        Interpreter {
-            environment: Rc::new(RefCell::new(Environment::default())),
+impl Visitor<Stmt, ()> for Interpreter {
+    fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
+        match input {
+            Stmt::Block { statements } => {
+                self.execute_block(statements)?;
+
+                Ok(())
+            }
+            Stmt::Expression { expression } => {
+                self.evaluate(expression)?;
+                Ok(())
+            }
+            Stmt::Function { name, params, body } => {
+                let callable = Callable::function(name.clone(), params.clone(), body.clone());
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.as_str(), ExprResult::callable_ref(callable));
+
+                Ok(())
+            }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let condition_result = self.evaluate(condition)?;
+
+                if self.is_truthy(&condition_result) {
+                    self.execute(then_branch)?
+                } else {
+                    match else_branch {
+                        None => {}
+                        Some(branch) => self.execute(branch)?,
+                    }
+                }
+
+                Ok(())
+            }
+            Stmt::Print { expression } => {
+                let value = self.evaluate(expression)?;
+                println!("{}", value);
+
+                Ok(())
+            }
+            Stmt::Return { value } => {
+                if let Some(expr) = value {
+                    let result = self.evaluate(expr)?;
+                    self.environment.borrow_mut().set_return_value(result);
+                }
+
+                Ok(())
+            }
+            Stmt::Var { name, initializer } => {
+                let value = self.evaluate(initializer)?;
+                self.environment.borrow_mut().define(&name.lexeme, value);
+
+                Ok(())
+            }
+            Stmt::While { condition, body } => {
+                while self.is_truthy(&self.evaluate(condition)?) {
+                    self.execute(body)?;
+                }
+
+                Ok(())
+            }
         }
     }
 }
