@@ -1,5 +1,5 @@
-use crate::base::scanner::TokenRef;
-use crate::base::stmt::StmtRef;
+use crate::base::scanner::Token;
+use crate::base::stmt::Stmt;
 use crate::base::visitor::RuntimeError;
 use crate::interpreter::interpreter::Interpreter;
 use std::fmt::Display;
@@ -91,9 +91,9 @@ pub(crate) trait Callable {
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct Function {
-    pub(crate) name: TokenRef,
-    pub(crate) params: Vec<TokenRef>,
-    pub(crate) body: Vec<StmtRef>,
+    pub(crate) name: Token,
+    pub(crate) params: Vec<Token>,
+    pub(crate) body: Vec<Stmt>,
 }
 
 impl Callable for Function {

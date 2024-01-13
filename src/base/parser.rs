@@ -1,8 +1,7 @@
-use crate::base::expr::{Expr, ExprRef, LiteralValue};
-use crate::base::scanner::{TokenRef, TokenType};
-use crate::base::stmt::{Stmt, StmtRef};
+use crate::base::expr::{Expr, LiteralValue};
+use crate::base::scanner::{Token, TokenType};
+use crate::base::stmt::Stmt;
 use std::cell::RefCell;
-use std::rc::Rc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -52,19 +51,19 @@ pub enum ParserError {
 }
 
 pub struct Parser {
-    pub tokens: Rc<Vec<TokenRef>>,
+    pub tokens: Vec<Token>,
     pub current: RefCell<usize>,
 }
 
 impl Parser {
-    pub fn new(tokens: Rc<Vec<TokenRef>>) -> Self {
+    pub fn new(tokens: Vec<Token>) -> Self {
         Parser {
             tokens,
             current: RefCell::new(0),
         }
     }
-    pub fn parse(&self) -> Result<Vec<StmtRef>, ParserError> {
-        let mut statements: Vec<StmtRef> = vec![];
+    pub fn parse(&self) -> Result<Vec<Stmt>, ParserError> {
+        let mut statements = vec![];
 
         while !self.is_at_end()? {
             statements.push(self.declaration()?)
@@ -73,7 +72,7 @@ impl Parser {
         Ok(statements)
     }
 
-    fn declaration(&self) -> Result<StmtRef, ParserError> {
+    fn declaration(&self) -> Result<Stmt, ParserError> {
         if self.match_token_types(&[TokenType::Fun])? {
             self.function()
         } else if self.match_token_types(&[TokenType::Var])? {
@@ -83,7 +82,7 @@ impl Parser {
         }
     }
 
-    fn function(&self) -> Result<StmtRef, ParserError> {
+    fn function(&self) -> Result<Stmt, ParserError> {
         let name = self.consume(TokenType::Identifier, ParserError::MissingFunctionName)?;
         self.consume(
             TokenType::LeftParen,
@@ -116,15 +115,15 @@ impl Parser {
 
         let body = self.block()?;
 
-        Ok(Stmt::function_ref(name, parameters, vec![body]))
+        Ok(Stmt::function(name, parameters, vec![body]))
     }
 
-    fn variable_declaration(&self) -> Result<StmtRef, ParserError> {
+    fn variable_declaration(&self) -> Result<Stmt, ParserError> {
         let name = self.consume(TokenType::Identifier, ParserError::MissingVariableName)?;
         let initializer = if self.match_token_types(&[TokenType::Equal])? {
             self.expression()?
         } else {
-            Expr::literal_ref(LiteralValue::None)
+            Expr::literal(LiteralValue::None)
         };
 
         self.consume(
@@ -132,10 +131,10 @@ impl Parser {
             ParserError::MissingSemicolonAfterVariableDeclaration,
         )?;
 
-        Ok(Stmt::var_ref(name, initializer))
+        Ok(Stmt::var(name, initializer))
     }
 
-    fn statement(&self) -> Result<StmtRef, ParserError> {
+    fn statement(&self) -> Result<Stmt, ParserError> {
         if self.match_token_types(&[TokenType::For])? {
             self.for_statement()
         } else if self.match_token_types(&[TokenType::If])? {
@@ -153,7 +152,7 @@ impl Parser {
         }
     }
 
-    fn for_statement(&self) -> Result<StmtRef, ParserError> {
+    fn for_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
             ParserError::MissingLeftParenthesisAfterForStatement,
@@ -170,7 +169,7 @@ impl Parser {
         let condition = if !self.check(TokenType::Semicolon)? {
             self.expression()?
         } else {
-            Expr::literal_ref(LiteralValue::Boolean(true))
+            Expr::literal(LiteralValue::Boolean(true))
         };
 
         self.consume(
@@ -192,19 +191,19 @@ impl Parser {
         let mut body = self.statement()?;
 
         if let Some(inc) = increment {
-            body = Stmt::block_ref(vec![body, Stmt::expression_ref(inc)])
+            body = Stmt::block(vec![body, Stmt::expression(inc)])
         }
 
-        body = Stmt::while_stmt_ref(condition, body);
+        body = Stmt::while_stmt(condition, body);
 
         if let Some(init) = initializer {
-            body = Stmt::block_ref(vec![init, body])
+            body = Stmt::block(vec![init, body])
         }
 
         Ok(body)
     }
 
-    fn if_statement(&self) -> Result<StmtRef, ParserError> {
+    fn if_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
             ParserError::MissingLeftParenthesisAfterIfStatement,
@@ -223,19 +222,19 @@ impl Parser {
             None
         };
 
-        Ok(Stmt::if_stmt_ref(condition, then_branch, else_branch))
+        Ok(Stmt::if_stmt(condition, then_branch, else_branch))
     }
 
-    fn print_statement(&self) -> Result<StmtRef, ParserError> {
+    fn print_statement(&self) -> Result<Stmt, ParserError> {
         let value = self.expression()?;
         self.consume(
             TokenType::Semicolon,
             ParserError::MissingSemicolonAfterValue,
         )?;
-        Ok(Stmt::print_ref(value))
+        Ok(Stmt::print(value))
     }
 
-    fn return_statement(&self) -> Result<StmtRef, ParserError> {
+    fn return_statement(&self) -> Result<Stmt, ParserError> {
         let expr = if !self.check(TokenType::Semicolon)? {
             Some(self.expression()?)
         } else {
@@ -247,10 +246,10 @@ impl Parser {
             ParserError::MissingSemicolonAfterExpression,
         )?;
 
-        Ok(Stmt::return_stmt_ref(expr))
+        Ok(Stmt::return_stmt(expr))
     }
 
-    fn while_statement(&self) -> Result<StmtRef, ParserError> {
+    fn while_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
             ParserError::MissingLeftParenthesisAfterWhileStatement,
@@ -264,11 +263,11 @@ impl Parser {
 
         let body = self.statement()?;
 
-        Ok(Stmt::while_stmt_ref(condition, body))
+        Ok(Stmt::while_stmt(condition, body))
     }
 
-    fn block(&self) -> Result<StmtRef, ParserError> {
-        let mut statements: Vec<StmtRef> = vec![];
+    fn block(&self) -> Result<Stmt, ParserError> {
+        let mut statements = vec![];
 
         while !self.check(TokenType::RightBrace)? && !self.is_at_end()? {
             statements.push(self.declaration()?)
@@ -279,30 +278,30 @@ impl Parser {
             ParserError::MissingRightBraceAfterBlock,
         )?;
 
-        Ok(Stmt::block_ref(statements))
+        Ok(Stmt::block(statements))
     }
 
-    fn expression_statement(&self) -> Result<StmtRef, ParserError> {
+    fn expression_statement(&self) -> Result<Stmt, ParserError> {
         let value = self.expression()?;
         self.consume(
             TokenType::Semicolon,
             ParserError::MissingSemicolonAfterExpression,
         )?;
-        Ok(Stmt::expression_ref(value))
+        Ok(Stmt::expression(value))
     }
 
-    fn expression(&self) -> Result<ExprRef, ParserError> {
+    fn expression(&self) -> Result<Expr, ParserError> {
         self.assignment()
     }
 
-    fn assignment(&self) -> Result<ExprRef, ParserError> {
+    fn assignment(&self) -> Result<Expr, ParserError> {
         let expr = self.or()?;
 
         if self.match_token_types(&[TokenType::Equal])? {
             let value = self.assignment()?;
 
-            return match *expr {
-                Expr::Variable { name } => Ok(Expr::assign_ref(name, value)),
+            return match expr {
+                Expr::Variable { name } => Ok(Expr::assign(name, value)),
                 _ => Err(ParserError::InvalidAssignmentTarget),
             };
         }
@@ -310,43 +309,43 @@ impl Parser {
         Ok(expr)
     }
 
-    fn or(&self) -> Result<ExprRef, ParserError> {
+    fn or(&self) -> Result<Expr, ParserError> {
         let mut expr = self.and()?;
 
         while self.match_token_types(&[TokenType::Or])? {
             let operator = self.previous()?;
             let right = self.and()?;
-            expr = Expr::logical_ref(expr, operator, right);
+            expr = Expr::logical(expr, operator, right);
         }
 
         Ok(expr)
     }
 
-    fn and(&self) -> Result<ExprRef, ParserError> {
+    fn and(&self) -> Result<Expr, ParserError> {
         let mut expr = self.equality()?;
 
         while self.match_token_types(&[TokenType::And])? {
             let operator = self.previous()?;
             let right = self.equality()?;
-            expr = Expr::logical_ref(expr, operator, right);
+            expr = Expr::logical(expr, operator, right);
         }
 
         Ok(expr)
     }
 
-    fn equality(&self) -> Result<ExprRef, ParserError> {
+    fn equality(&self) -> Result<Expr, ParserError> {
         let mut expr = self.comparison()?;
 
         while self.match_token_types(&[TokenType::BangEqual, TokenType::EqualEqual])? {
             let operator = self.previous()?;
             let right = self.comparison()?;
-            expr = Expr::binary_ref(expr, operator, right)
+            expr = Expr::binary(expr, operator, right)
         }
 
         Ok(expr)
     }
 
-    fn comparison(&self) -> Result<ExprRef, ParserError> {
+    fn comparison(&self) -> Result<Expr, ParserError> {
         let mut expr = self.term()?;
 
         while self.match_token_types(&[
@@ -357,52 +356,52 @@ impl Parser {
         ])? {
             let operator = self.previous()?;
             let right = self.term()?;
-            expr = Expr::binary_ref(expr, operator, right)
+            expr = Expr::binary(expr, operator, right)
         }
 
         Ok(expr)
     }
 
-    fn term(&self) -> Result<ExprRef, ParserError> {
+    fn term(&self) -> Result<Expr, ParserError> {
         let mut expr = self.factor()?;
 
         while self.match_token_types(&[TokenType::Minus, TokenType::Plus])? {
             let operator = self.previous()?;
             let right = self.factor()?;
-            expr = Expr::binary_ref(expr, operator, right)
+            expr = Expr::binary(expr, operator, right)
         }
 
         Ok(expr)
     }
 
-    fn factor(&self) -> Result<ExprRef, ParserError> {
+    fn factor(&self) -> Result<Expr, ParserError> {
         let mut expr = self.unary()?;
 
         while self.match_token_types(&[TokenType::Slash, TokenType::Star])? {
             let operator = self.previous()?;
             let right = self.unary()?;
-            expr = Expr::binary_ref(expr, operator, right)
+            expr = Expr::binary(expr, operator, right)
         }
 
         Ok(expr)
     }
 
-    fn unary(&self) -> Result<ExprRef, ParserError> {
+    fn unary(&self) -> Result<Expr, ParserError> {
         if self.match_token_types(&[TokenType::Bang, TokenType::Minus])? {
             let operator = self.previous()?;
             let right = self.unary()?;
-            return Ok(Expr::unary_ref(operator, right));
+            return Ok(Expr::unary(operator, right));
         }
 
         self.call()
     }
 
-    fn call(&self) -> Result<ExprRef, ParserError> {
+    fn call(&self) -> Result<Expr, ParserError> {
         let mut expr = self.primary()?;
 
         loop {
             if self.match_token_types(&[TokenType::LeftParen])? {
-                let mut arguments: Vec<ExprRef> = vec![];
+                let mut arguments = vec![];
                 if !self.check(TokenType::RightParen)? {
                     loop {
                         arguments.push(self.expression()?);
@@ -418,7 +417,7 @@ impl Parser {
                     ParserError::MissingRightParenthesisAfterArguments,
                 )?;
 
-                expr = Expr::call_ref(expr, arguments);
+                expr = Expr::call(expr, arguments);
             } else {
                 break;
             }
@@ -427,31 +426,31 @@ impl Parser {
         Ok(expr)
     }
 
-    fn primary(&self) -> Result<ExprRef, ParserError> {
+    fn primary(&self) -> Result<Expr, ParserError> {
         if self.match_token_types(&[TokenType::False])? {
-            return Ok(Expr::literal_ref(LiteralValue::Boolean(false)));
+            return Ok(Expr::literal(LiteralValue::Boolean(false)));
         }
         if self.match_token_types(&[TokenType::True])? {
-            return Ok(Expr::literal_ref(LiteralValue::Boolean(true)));
+            return Ok(Expr::literal(LiteralValue::Boolean(true)));
         }
         if self.match_token_types(&[TokenType::Nil])? {
-            return Ok(Expr::literal_ref(LiteralValue::None));
+            return Ok(Expr::literal(LiteralValue::None));
         }
 
         match &self.peek()?.token_type {
             TokenType::Number { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(LiteralValue::Number(*value)));
+                return Ok(Expr::literal(LiteralValue::Number(*value)));
             }
             TokenType::String { value } => {
                 self.advance()?;
-                return Ok(Expr::literal_ref(LiteralValue::String(value.clone())));
+                return Ok(Expr::literal(LiteralValue::String(value.clone())));
             }
             _ => {}
         }
 
         if self.match_token_types(&[TokenType::Identifier])? {
-            return Ok(Expr::variable_ref(self.previous()?));
+            return Ok(Expr::variable(self.previous()?));
         }
 
         if self.match_token_types(&[TokenType::LeftParen])? {
@@ -460,34 +459,34 @@ impl Parser {
                 TokenType::RightParen,
                 ParserError::MissingRightParenthesisAfterExpression,
             )?;
-            return Ok(Expr::grouping_ref(expr));
+            return Ok(Expr::grouping(expr));
         }
 
         Err(ParserError::MissingExpression)
     }
 
-    fn peek(&self) -> Result<TokenRef, ParserError> {
+    fn peek(&self) -> Result<Token, ParserError> {
         match self.tokens.get(*self.current.borrow()) {
             None => Err(ParserError::TokenReadError),
-            Some(token) => Ok(token.clone()),
+            Some(token) => Ok((*token).clone()),
         }
     }
 
-    fn previous(&self) -> Result<TokenRef, ParserError> {
+    fn previous(&self) -> Result<Token, ParserError> {
         match self.tokens.get(*self.current.borrow() - 1) {
             None => Err(ParserError::TokenReadError),
-            Some(token) => Ok(token.clone()),
+            Some(token) => Ok((*token).clone()),
         }
     }
 
-    fn advance(&self) -> Result<TokenRef, ParserError> {
+    fn advance(&self) -> Result<Token, ParserError> {
         if !self.is_at_end()? {
             *self.current.borrow_mut() += 1
         }
         self.previous()
     }
 
-    fn consume(&self, token_type: TokenType, error: ParserError) -> Result<TokenRef, ParserError> {
+    fn consume(&self, token_type: TokenType, error: ParserError) -> Result<Token, ParserError> {
         if self.check(token_type)? {
             self.advance()
         } else {

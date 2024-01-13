@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::str::FromStr;
 
 use thiserror::Error;
@@ -51,14 +49,12 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub line: usize,
 }
-
-pub type TokenRef = Rc<Token>;
 
 impl Token {
     pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
@@ -67,10 +63,6 @@ impl Token {
             lexeme,
             line,
         }
-    }
-
-    pub fn new_ref(token_type: TokenType, lexeme: String, line: usize) -> Rc<Self> {
-        Rc::new(Token::new(token_type, lexeme, line))
     }
 }
 
@@ -86,7 +78,7 @@ pub enum ScannerError {
 
 pub struct Scanner {
     source: Vec<char>,
-    tokens: RefCell<Vec<TokenRef>>,
+    tokens: Vec<Token>,
     start_pos: usize,
     current_pos: usize,
     current_line: usize,
@@ -96,26 +88,26 @@ impl Scanner {
     pub fn new(input: String) -> Self {
         Scanner {
             source: input.chars().collect(),
-            tokens: RefCell::new(vec![]),
+            tokens: vec![],
             start_pos: 0,
             current_pos: 0,
             current_line: 1,
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Rc<Vec<TokenRef>>, ScannerError> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, ScannerError> {
         while !self.is_at_end() {
             self.start_pos = self.current_pos;
             self.scan_token()?;
         }
 
-        self.tokens.borrow_mut().push(Token::new_ref(
+        self.tokens.push(Token::new(
             TokenType::Eof,
             String::from(""),
             self.current_line,
         ));
 
-        Ok(Rc::new(self.tokens.borrow().clone()))
+        Ok(self.tokens.clone())
     }
 
     fn scan_token(&mut self) -> Result<(), ScannerError> {
@@ -202,8 +194,7 @@ impl Scanner {
             .iter()
             .collect();
         self.tokens
-            .borrow_mut()
-            .push(Token::new_ref(token_type, token_string, self.current_line));
+            .push(Token::new(token_type, token_string, self.current_line));
 
         Ok(())
     }
@@ -212,7 +203,7 @@ impl Scanner {
         let token_string: String = self.source[self.start_pos..self.current_pos]
             .iter()
             .collect();
-        self.tokens.borrow_mut().push(Token::new_ref(
+        self.tokens.push(Token::new(
             TokenType::String { value },
             token_string,
             self.current_line,
@@ -225,7 +216,7 @@ impl Scanner {
         let token_string: String = self.source[self.start_pos..self.current_pos]
             .iter()
             .collect();
-        self.tokens.borrow_mut().push(Token::new_ref(
+        self.tokens.push(Token::new(
             TokenType::Number { value },
             token_string,
             self.current_line,

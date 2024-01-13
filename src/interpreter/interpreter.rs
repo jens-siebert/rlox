@@ -1,8 +1,8 @@
-use crate::base::expr::{Expr, ExprRef, LiteralValue};
+use crate::base::expr::{Expr, LiteralValue};
 use crate::base::expr_result::{Callable, Function};
 use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
-use crate::base::stmt::{Stmt, StmtRef};
+use crate::base::stmt::Stmt;
 use crate::base::visitor::{RuntimeError, Visitor};
 use crate::interpreter::environment::Environment;
 use std::cell::RefCell;
@@ -17,17 +17,17 @@ impl Interpreter {
         Self { environment }
     }
 
-    fn evaluate(&self, expr: &ExprRef) -> Result<ExprResultRef, RuntimeError> {
+    fn evaluate(&self, expr: &Expr) -> Result<ExprResultRef, RuntimeError> {
         expr.accept(self)
     }
 
-    fn execute(&self, stmt: &StmtRef) -> Result<(), RuntimeError> {
+    fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
         stmt.accept(self)
     }
 
     pub(crate) fn execute_block(
         &self,
-        statements: &Vec<StmtRef>,
+        statements: &Vec<Stmt>,
     ) -> Result<ExprResultRef, RuntimeError> {
         let mut return_value = ExprResult::none_ref();
         self.environment.borrow_mut().push_scope();
@@ -35,7 +35,7 @@ impl Interpreter {
         for statement in statements {
             self.execute(statement)?;
 
-            if let Stmt::Return { .. } = **statement {
+            if let Stmt::Return { .. } = *statement {
                 return_value = self.environment.borrow().get_return_value();
                 break;
             }
@@ -46,7 +46,7 @@ impl Interpreter {
         Ok(return_value)
     }
 
-    pub fn interpret(&self, statements: Vec<StmtRef>) -> Result<(), RuntimeError> {
+    pub fn interpret(&self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
         for statement in statements {
             self.execute(&statement)?;
         }
@@ -231,11 +231,8 @@ impl Visitor<Stmt, ()> for Interpreter {
 
                 if condition_result.is_truthy() {
                     self.execute(then_branch)?
-                } else {
-                    match else_branch {
-                        None => {}
-                        Some(branch) => self.execute(branch)?,
-                    }
+                } else if let Some(branch) = *else_branch.to_owned() {
+                    self.execute(&branch)?
                 }
 
                 Ok(())
@@ -247,8 +244,8 @@ impl Visitor<Stmt, ()> for Interpreter {
                 Ok(())
             }
             Stmt::Return { value } => {
-                if let Some(expr) = value {
-                    let result = self.evaluate(expr)?;
+                if let Some(expr) = *value.to_owned() {
+                    let result = self.evaluate(&expr)?;
                     self.environment.borrow_mut().set_return_value(result);
                 }
 
