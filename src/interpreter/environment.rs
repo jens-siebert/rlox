@@ -1,7 +1,7 @@
 use crate::base::expr_result::ExprResultRef;
 use crate::base::visitor::RuntimeError;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 #[derive(Clone, Default, PartialEq)]
@@ -34,17 +34,17 @@ impl Scope {
 #[derive(Clone, Default, PartialEq)]
 pub struct Environment {
     current_scope: Scope,
-    parent_scopes: Vec<Scope>,
+    parent_scopes: VecDeque<Scope>,
 }
 
 impl Environment {
     pub(crate) fn push_scope(&mut self) {
         let enclosing_scope = std::mem::take(&mut self.current_scope);
-        self.parent_scopes.push(enclosing_scope);
+        self.parent_scopes.push_front(enclosing_scope);
     }
 
     pub(crate) fn pop_scope(&mut self) {
-        let parent_scope = self.parent_scopes.pop().unwrap();
+        let parent_scope = self.parent_scopes.pop_front().unwrap();
         self.current_scope = parent_scope;
     }
 
@@ -57,7 +57,7 @@ impl Environment {
             return Ok(value);
         }
 
-        for scope in self.parent_scopes.iter().rev() {
+        for scope in self.parent_scopes.iter() {
             if let Some(value) = scope.get(name) {
                 return Ok(value);
             }
@@ -70,7 +70,7 @@ impl Environment {
         if self.current_scope.assign(name, value).is_ok() {
             return Ok(());
         }
-        for scope in self.parent_scopes.iter_mut().rev() {
+        for scope in self.parent_scopes.iter_mut() {
             if scope.assign(name, value).is_ok() {
                 return Ok(());
             }
