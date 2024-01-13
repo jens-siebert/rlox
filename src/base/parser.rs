@@ -116,7 +116,7 @@ impl Parser {
 
         let body = self.block()?;
 
-        Ok(Stmt::function_ref(name, parameters, body))
+        Ok(Stmt::function_ref(name, parameters, vec![body]))
     }
 
     fn variable_declaration(&self) -> Result<StmtRef, ParserError> {

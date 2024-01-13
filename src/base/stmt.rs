@@ -13,7 +13,7 @@ pub enum Stmt {
     Function {
         name: TokenRef,
         params: Vec<TokenRef>,
-        body: StmtRef,
+        body: Vec<StmtRef>,
     },
     If {
         condition: ExprRef,
@@ -47,11 +47,11 @@ impl Stmt {
         Box::new(Stmt::block(statements))
     }
 
-    pub fn function(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Self {
+    pub fn function(name: TokenRef, params: Vec<TokenRef>, body: Vec<StmtRef>) -> Self {
         Stmt::Function { name, params, body }
     }
 
-    pub fn function_ref(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Box<Self> {
+    pub fn function_ref(name: TokenRef, params: Vec<TokenRef>, body: Vec<StmtRef>) -> Box<Self> {
         Box::new(Stmt::function(name, params, body))
     }
 

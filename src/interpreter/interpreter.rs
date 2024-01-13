@@ -1,5 +1,5 @@
 use crate::base::expr::{Expr, ExprRef, LiteralValue};
-use crate::base::expr_result::Callable;
+use crate::base::expr_result::{Callable, Function};
 use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::{Stmt, StmtRef};
@@ -9,22 +9,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    environment: Rc<RefCell<Environment>>,
+    pub(crate) environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
-        Interpreter {
-            environment: Rc::new(RefCell::new(Environment::default())),
-        }
-    }
-
-    fn is_truthy(&self, literal_value: &ExprResultRef) -> bool {
-        match **literal_value {
-            ExprResult::Boolean(value) => value,
-            ExprResult::None => false,
-            _ => true,
-        }
+    pub fn new(environment: Rc<RefCell<Environment>>) -> Self {
+        Self { environment }
     }
 
     fn evaluate(&self, expr: &ExprRef) -> Result<ExprResultRef, RuntimeError> {
@@ -44,9 +34,9 @@ impl Interpreter {
 
         for statement in statements {
             self.execute(statement)?;
-            return_value = self.environment.borrow().get_return_value();
 
-            if ExprResult::None != *return_value {
+            if let Stmt::Return { .. } = **statement {
+                return_value = self.environment.borrow().get_return_value();
                 break;
             }
         }
@@ -67,7 +57,7 @@ impl Interpreter {
 
 impl Default for Interpreter {
     fn default() -> Self {
-        Interpreter::new()
+        Interpreter::new(Rc::new(RefCell::new(Environment::default())))
     }
 }
 
@@ -172,10 +162,10 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
                 let left_expr = self.evaluate(left)?;
 
                 if operator.token_type == TokenType::Or {
-                    if self.is_truthy(&left_expr) {
+                    if left_expr.is_truthy() {
                         return Ok(left_expr);
                     }
-                } else if !self.is_truthy(&left_expr) {
+                } else if !left_expr.is_truthy() {
                     return Ok(left_expr);
                 }
 
@@ -189,7 +179,7 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
                         ExprResult::Number(value) => Ok(ExprResult::number_ref(-value)),
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Bang => Ok(ExprResult::boolean_ref(!self.is_truthy(&right))),
+                    TokenType::Bang => Ok(ExprResult::boolean_ref(!right.is_truthy())),
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
@@ -219,10 +209,16 @@ impl Visitor<Stmt, ()> for Interpreter {
                 Ok(())
             }
             Stmt::Function { name, params, body } => {
-                let callable = Callable::function(name.clone(), params.clone(), body.clone());
-                self.environment
-                    .borrow_mut()
-                    .define(name.lexeme.as_str(), ExprResult::callable_ref(callable));
+                let callable = Function {
+                    name: name.clone(),
+                    params: params.clone(),
+                    body: body.clone(),
+                };
+
+                self.environment.borrow_mut().define(
+                    name.lexeme.as_str(),
+                    ExprResult::callable_ref(callable.clone()),
+                );
 
                 Ok(())
             }
@@ -233,7 +229,7 @@ impl Visitor<Stmt, ()> for Interpreter {
             } => {
                 let condition_result = self.evaluate(condition)?;
 
-                if self.is_truthy(&condition_result) {
+                if condition_result.is_truthy() {
                     self.execute(then_branch)?
                 } else {
                     match else_branch {
@@ -265,50 +261,11 @@ impl Visitor<Stmt, ()> for Interpreter {
                 Ok(())
             }
             Stmt::While { condition, body } => {
-                while self.is_truthy(&self.evaluate(condition)?) {
+                while self.evaluate(condition)?.is_truthy() {
                     self.execute(body)?;
                 }
 
                 Ok(())
-            }
-        }
-    }
-}
-
-impl Callable {
-    fn call(
-        &self,
-        interpreter: &Interpreter,
-        arguments: Vec<ExprResultRef>,
-    ) -> Result<ExprResultRef, RuntimeError> {
-        match self {
-            Callable::Function {
-                name: _name,
-                params,
-                body,
-            } => {
-                interpreter.environment.borrow_mut().push_scope();
-
-                for (i, token) in params.iter().enumerate() {
-                    if let Some(argument) = arguments.get(i) {
-                        interpreter
-                            .environment
-                            .borrow_mut()
-                            .define(token.lexeme.as_str(), argument.clone());
-                    } else {
-                        return Err(RuntimeError::InvalidArgument);
-                    }
-                }
-
-                let return_value = if let Stmt::Block { statements } = *body.clone() {
-                    interpreter.execute_block(&statements)
-                } else {
-                    Err(RuntimeError::BlockExpected)
-                };
-
-                interpreter.environment.borrow_mut().pop_scope();
-
-                return_value
             }
         }
     }

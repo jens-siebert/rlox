@@ -32,7 +32,7 @@ impl Scope {
 }
 
 #[derive(Clone, Default, PartialEq)]
-pub(crate) struct Environment {
+pub struct Environment {
     current_scope: Scope,
     parent_scopes: Vec<Scope>,
 }

@@ -1,18 +1,20 @@
 use crate::base::scanner::TokenRef;
 use crate::base::stmt::StmtRef;
+use crate::base::visitor::RuntimeError;
+use crate::interpreter::interpreter::Interpreter;
 use std::fmt::Display;
 
 #[derive(Clone, Default, PartialEq)]
-pub enum ExprResult {
+pub(crate) enum ExprResult {
     Number(f64),
     String(String),
     Boolean(bool),
-    Callable(Callable),
+    Callable(Function),
     #[default]
     None,
 }
 
-pub type ExprResultRef = Box<ExprResult>;
+pub(crate) type ExprResultRef = Box<ExprResult>;
 
 impl ExprResult {
     pub fn number(value: f64) -> Self {
@@ -39,11 +41,11 @@ impl ExprResult {
         Box::new(ExprResult::boolean(value))
     }
 
-    pub fn callable(value: Callable) -> Self {
+    pub fn callable(value: Function) -> Self {
         ExprResult::Callable(value)
     }
 
-    pub fn callable_ref(value: Callable) -> Box<Self> {
+    pub fn callable_ref(value: Function) -> Box<Self> {
         Box::new(ExprResult::callable(value))
     }
 
@@ -54,6 +56,14 @@ impl ExprResult {
     pub fn none_ref() -> Box<Self> {
         Box::new(ExprResult::none())
     }
+
+    pub(crate) fn is_truthy(&self) -> bool {
+        match *self {
+            ExprResult::Boolean(value) => value,
+            ExprResult::None => false,
+            _ => true,
+        }
+    }
 }
 
 impl Display for ExprResult {
@@ -62,7 +72,7 @@ impl Display for ExprResult {
             ExprResult::Number(value) => value.to_string(),
             ExprResult::String(value) => value.to_string(),
             ExprResult::Boolean(value) => value.to_string(),
-            ExprResult::Callable(callable) => format!("<fn {}>", callable.name()),
+            ExprResult::Callable(callable) => format!("<fn {}>", callable.name.lexeme),
             ExprResult::None => String::from("nil"),
         };
 
@@ -70,37 +80,49 @@ impl Display for ExprResult {
     }
 }
 
-#[derive(Clone, PartialEq)]
-pub enum Callable {
-    Function {
-        name: TokenRef,
-        params: Vec<TokenRef>,
-        body: StmtRef,
-    },
+pub(crate) trait Callable {
+    fn arity(&self) -> usize;
+    fn call(
+        &self,
+        interpreter: &Interpreter,
+        arguments: Vec<ExprResultRef>,
+    ) -> Result<ExprResultRef, RuntimeError>;
 }
 
-impl Callable {
-    pub fn function(name: TokenRef, params: Vec<TokenRef>, body: StmtRef) -> Self {
-        Callable::Function { name, params, body }
+#[derive(Clone, PartialEq)]
+pub(crate) struct Function {
+    pub(crate) name: TokenRef,
+    pub(crate) params: Vec<TokenRef>,
+    pub(crate) body: Vec<StmtRef>,
+}
+
+impl Callable for Function {
+    fn arity(&self) -> usize {
+        self.params.len()
     }
 
-    pub(crate) fn name(&self) -> String {
-        match self {
-            Callable::Function {
-                name,
-                params: _params,
-                body: _body,
-            } => name.lexeme.clone(),
-        }
-    }
+    fn call(
+        &self,
+        interpreter: &Interpreter,
+        arguments: Vec<ExprResultRef>,
+    ) -> Result<ExprResultRef, RuntimeError> {
+        interpreter.environment.borrow_mut().push_scope();
 
-    pub(crate) fn arity(&self) -> usize {
-        match self {
-            Callable::Function {
-                name: _name,
-                params,
-                body: _body,
-            } => params.len(),
+        for (i, token) in self.params.iter().enumerate() {
+            if let Some(argument) = arguments.get(i) {
+                interpreter
+                    .environment
+                    .borrow_mut()
+                    .define(token.lexeme.as_str(), argument.clone());
+            } else {
+                return Err(RuntimeError::InvalidArgument);
+            }
         }
+
+        let return_value = interpreter.execute_block(&self.body);
+
+        interpreter.environment.borrow_mut().pop_scope();
+
+        return_value
     }
 }
