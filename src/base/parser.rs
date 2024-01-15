@@ -115,7 +115,7 @@ impl Parser {
 
         let body = self.block()?;
 
-        Ok(Stmt::function(name, parameters, vec![body]))
+        Ok(Stmt::function(name, parameters, body))
     }
 
     fn variable_declaration(&self) -> Result<Stmt, ParserError> {
@@ -146,7 +146,8 @@ impl Parser {
         } else if self.match_token_types(&[TokenType::While])? {
             self.while_statement()
         } else if self.match_token_types(&[TokenType::LeftBrace])? {
-            self.block()
+            let block = self.block()?;
+            Ok(Stmt::block(block))
         } else {
             self.expression_statement()
         }
@@ -266,7 +267,7 @@ impl Parser {
         Ok(Stmt::while_stmt(condition, body))
     }
 
-    fn block(&self) -> Result<Stmt, ParserError> {
+    fn block(&self) -> Result<Vec<Stmt>, ParserError> {
         let mut statements = vec![];
 
         while !self.check(TokenType::RightBrace)? && !self.is_at_end()? {
@@ -278,7 +279,7 @@ impl Parser {
             ParserError::MissingRightBraceAfterBlock,
         )?;
 
-        Ok(Stmt::block(statements))
+        Ok(statements)
     }
 
     fn expression_statement(&self) -> Result<Stmt, ParserError> {
