@@ -11,7 +11,7 @@ pub enum Stmt {
         expression: Box<Expr>,
     },
     Function {
-        name: Token,
+        name: Box<Token>,
         params: Vec<Token>,
         body: Vec<Stmt>,
     },
@@ -27,7 +27,7 @@ pub enum Stmt {
         value: Box<Option<Expr>>,
     },
     Var {
-        name: Token,
+        name: Box<Token>,
         initializer: Box<Expr>,
     },
     While {
@@ -42,7 +42,11 @@ impl Stmt {
     }
 
     pub fn function(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
-        Stmt::Function { name, params, body }
+        Stmt::Function {
+            name: Box::new(name),
+            params,
+            body,
+        }
     }
 
     pub fn expression(expression: Expr) -> Self {
@@ -73,7 +77,7 @@ impl Stmt {
 
     pub fn var(name: Token, initializer: Expr) -> Self {
         Stmt::Var {
-            name,
+            name: Box::new(name),
             initializer: Box::new(initializer),
         }
     }

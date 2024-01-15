@@ -1,6 +1,6 @@
 use crate::base::expr::{Expr, LiteralValue};
+use crate::base::expr_result::ExprResult;
 use crate::base::expr_result::{Callable, Function};
-use crate::base::expr_result::{ExprResult, ExprResultRef};
 use crate::base::scanner::TokenType;
 use crate::base::stmt::Stmt;
 use crate::base::visitor::{RuntimeError, Visitor};
@@ -17,19 +17,27 @@ impl Interpreter {
         Self { environment }
     }
 
-    fn evaluate(&self, expr: &Expr) -> Result<ExprResultRef, RuntimeError> {
-        expr.accept(self)
+    pub fn interpret(&self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
+        for statement in statements {
+            self.execute(&statement)?;
+        }
+
+        Ok(())
     }
 
     fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
         stmt.accept(self)
     }
 
+    fn evaluate(&self, expr: &Expr) -> Result<Box<ExprResult>, RuntimeError> {
+        expr.accept(self)
+    }
+
     pub(crate) fn execute_block(
         &self,
         statements: &Vec<Stmt>,
-    ) -> Result<ExprResultRef, RuntimeError> {
-        let mut return_value = ExprResult::none_ref();
+    ) -> Result<Box<ExprResult>, RuntimeError> {
+        let mut return_value = Box::new(ExprResult::none());
         self.environment.borrow_mut().push_scope();
 
         for statement in statements {
@@ -45,14 +53,6 @@ impl Interpreter {
 
         Ok(return_value)
     }
-
-    pub fn interpret(&self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
-        for statement in statements {
-            self.execute(&statement)?;
-        }
-
-        Ok(())
-    }
 }
 
 impl Default for Interpreter {
@@ -61,8 +61,8 @@ impl Default for Interpreter {
     }
 }
 
-impl Visitor<Expr, ExprResultRef> for Interpreter {
-    fn visit(&self, input: &Expr) -> Result<ExprResultRef, RuntimeError> {
+impl Visitor<Expr, Box<ExprResult>> for Interpreter {
+    fn visit(&self, input: &Expr) -> Result<Box<ExprResult>, RuntimeError> {
         match input {
             Expr::Binary {
                 left,
@@ -75,54 +75,54 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
                 match &operator.token_type {
                     TokenType::Greater => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::boolean_ref(v1 > v2))
+                            Ok(ExprResult::boolean(v1 > v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::GreaterEqual => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::boolean_ref(v1 >= v2))
+                            Ok(ExprResult::boolean(v1 >= v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Less => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::boolean_ref(v1 < v2))
+                            Ok(ExprResult::boolean(v1 < v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::LessEqual => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::boolean_ref(v1 <= v2))
+                            Ok(ExprResult::boolean(v1 <= v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::BangEqual => Ok(ExprResult::boolean_ref(*left != *right)),
-                    TokenType::EqualEqual => Ok(ExprResult::boolean_ref(*left == *right)),
+                    TokenType::BangEqual => Ok(ExprResult::boolean(left != right).into()),
+                    TokenType::EqualEqual => Ok(ExprResult::boolean(left == right).into()),
                     TokenType::Minus => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::number_ref(v1 - v2))
+                            Ok(ExprResult::number(v1 - v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Slash => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::number_ref(v1 / v2))
+                            Ok(ExprResult::number(v1 / v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Star => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::number_ref(v1 * v2))
+                            Ok(ExprResult::number(v1 * v2).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
                     TokenType::Plus => match (*left, *right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
-                            Ok(ExprResult::number_ref(v1 + v2))
+                            Ok(ExprResult::number(v1 + v2).into())
                         }
                         (ExprResult::String(v1), ExprResult::String(v2)) => {
-                            Ok(ExprResult::string_ref(v1.clone() + v2.clone().as_str()))
+                            Ok(ExprResult::string(v1.clone() + v2.clone().as_str()).into())
                         }
                         _ => Err(RuntimeError::NumberExpected),
                     },
@@ -139,20 +139,20 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
 
                     let mut args = vec![];
                     for argument in arguments {
-                        args.push(self.evaluate(argument)?);
+                        args.push(*self.evaluate(argument)?);
                     }
 
-                    callable.call(self, args)
+                    callable.call(self, &args)
                 } else {
                     Err(RuntimeError::UndefinedCallable)
                 }
             }
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
-                LiteralValue::Number(value) => Ok(ExprResult::number_ref(*value)),
-                LiteralValue::String(value) => Ok(ExprResult::string_ref(value.clone())),
-                LiteralValue::Boolean(value) => Ok(ExprResult::boolean_ref(*value)),
-                LiteralValue::None => Ok(ExprResult::none_ref()),
+                LiteralValue::Number(value) => Ok(ExprResult::number(*value).into()),
+                LiteralValue::String(value) => Ok(ExprResult::string(value.clone()).into()),
+                LiteralValue::Boolean(value) => Ok(ExprResult::boolean(*value).into()),
+                LiteralValue::None => Ok(ExprResult::none().into()),
             },
             Expr::Logical {
                 left,
@@ -176,15 +176,15 @@ impl Visitor<Expr, ExprResultRef> for Interpreter {
 
                 match &operator.token_type {
                     TokenType::Minus => match *right {
-                        ExprResult::Number(value) => Ok(ExprResult::number_ref(-value)),
+                        ExprResult::Number(value) => Ok(ExprResult::number(-value).into()),
                         _ => Err(RuntimeError::NumberExpected),
                     },
-                    TokenType::Bang => Ok(ExprResult::boolean_ref(!right.is_truthy())),
+                    TokenType::Bang => Ok(ExprResult::boolean(!right.is_truthy()).into()),
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
             Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
-                Ok(value) => Ok(value),
+                Ok(value) => Ok(value.into()),
                 Err(_) => Err(RuntimeError::UndefinedVariable),
             },
             Expr::Assign { name, value } => {
@@ -201,26 +201,20 @@ impl Visitor<Stmt, ()> for Interpreter {
         match input {
             Stmt::Block { statements } => {
                 self.execute_block(statements)?;
-
-                Ok(())
             }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
-                Ok(())
             }
             Stmt::Function { name, params, body } => {
                 let callable = Function {
-                    name: name.clone(),
+                    name: *name.clone(),
                     params: params.clone(),
                     body: body.clone(),
                 };
 
-                self.environment.borrow_mut().define(
-                    name.lexeme.as_str(),
-                    ExprResult::callable_ref(callable.clone()),
-                );
-
-                Ok(())
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.as_str(), ExprResult::callable(callable.clone()));
             }
             Stmt::If {
                 condition,
@@ -234,36 +228,28 @@ impl Visitor<Stmt, ()> for Interpreter {
                 } else if let Some(branch) = *else_branch.to_owned() {
                     self.execute(&branch)?
                 }
-
-                Ok(())
             }
             Stmt::Print { expression } => {
                 let value = self.evaluate(expression)?;
                 println!("{}", value);
-
-                Ok(())
             }
             Stmt::Return { value } => {
                 if let Some(expr) = *value.to_owned() {
-                    let result = self.evaluate(&expr)?;
+                    let result = *self.evaluate(&expr)?;
                     self.environment.borrow_mut().set_return_value(result);
                 }
-
-                Ok(())
             }
             Stmt::Var { name, initializer } => {
-                let value = self.evaluate(initializer)?;
+                let value = *self.evaluate(initializer)?;
                 self.environment.borrow_mut().define(&name.lexeme, value);
-
-                Ok(())
             }
             Stmt::While { condition, body } => {
                 while self.evaluate(condition)?.is_truthy() {
                     self.execute(body)?;
                 }
-
-                Ok(())
             }
         }
+
+        Ok(())
     }
 }

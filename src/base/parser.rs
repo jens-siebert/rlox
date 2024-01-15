@@ -301,7 +301,7 @@ impl Parser {
             let value = self.assignment()?;
 
             return match expr {
-                Expr::Variable { name } => Ok(Expr::assign(name, value)),
+                Expr::Variable { name } => Ok(Expr::assign(*name, value)),
                 _ => Err(ParserError::InvalidAssignmentTarget),
             };
         }

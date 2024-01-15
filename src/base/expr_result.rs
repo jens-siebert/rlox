@@ -14,47 +14,25 @@ pub(crate) enum ExprResult {
     None,
 }
 
-pub(crate) type ExprResultRef = Box<ExprResult>;
-
 impl ExprResult {
     pub fn number(value: f64) -> Self {
         ExprResult::Number(value)
-    }
-
-    pub fn number_ref(value: f64) -> Box<Self> {
-        Box::new(ExprResult::number(value))
     }
 
     pub fn string(value: String) -> Self {
         ExprResult::String(value)
     }
 
-    pub fn string_ref(value: String) -> Box<Self> {
-        Box::new(ExprResult::string(value))
-    }
-
     pub fn boolean(value: bool) -> Self {
         ExprResult::Boolean(value)
-    }
-
-    pub fn boolean_ref(value: bool) -> Box<Self> {
-        Box::new(ExprResult::boolean(value))
     }
 
     pub fn callable(value: Function) -> Self {
         ExprResult::Callable(value)
     }
 
-    pub fn callable_ref(value: Function) -> Box<Self> {
-        Box::new(ExprResult::callable(value))
-    }
-
     pub fn none() -> Self {
         ExprResult::None
-    }
-
-    pub fn none_ref() -> Box<Self> {
-        Box::new(ExprResult::none())
     }
 
     pub(crate) fn is_truthy(&self) -> bool {
@@ -85,8 +63,8 @@ pub(crate) trait Callable {
     fn call(
         &self,
         interpreter: &Interpreter,
-        arguments: Vec<ExprResultRef>,
-    ) -> Result<ExprResultRef, RuntimeError>;
+        arguments: &Vec<ExprResult>,
+    ) -> Result<Box<ExprResult>, RuntimeError>;
 }
 
 #[derive(Clone, PartialEq)]
@@ -104,8 +82,8 @@ impl Callable for Function {
     fn call(
         &self,
         interpreter: &Interpreter,
-        arguments: Vec<ExprResultRef>,
-    ) -> Result<ExprResultRef, RuntimeError> {
+        arguments: &Vec<ExprResult>,
+    ) -> Result<Box<ExprResult>, RuntimeError> {
         interpreter.environment.borrow_mut().push_scope();
 
         for (i, token) in self.params.iter().enumerate() {
