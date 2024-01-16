@@ -5,7 +5,6 @@ use std::collections::{HashMap, VecDeque};
 #[derive(Clone, Default, PartialEq)]
 struct Scope {
     values: HashMap<String, ExprResult>,
-    return_value: Box<ExprResult>,
 }
 
 impl Scope {
