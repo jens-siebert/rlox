@@ -2,7 +2,7 @@ use crate::base::expr::Expr;
 use crate::base::scanner::Token;
 use crate::base::visitor::{RuntimeError, Visitor};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     Block {
         statements: Vec<Stmt>,

@@ -1,7 +1,7 @@
 use crate::base::scanner::Token;
 use crate::base::visitor::{RuntimeError, Visitor};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LiteralValue {
     Number(f64),
     String(String),
@@ -9,7 +9,7 @@ pub enum LiteralValue {
     None,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

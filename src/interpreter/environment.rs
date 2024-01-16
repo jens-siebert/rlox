@@ -76,12 +76,4 @@ impl Environment {
 
         Err(RuntimeError::UndefinedVariable)
     }
-
-    pub(crate) fn get_return_value(&self) -> Box<ExprResult> {
-        self.current_scope.return_value.clone()
-    }
-
-    pub(crate) fn set_return_value(&mut self, value: ExprResult) {
-        self.current_scope.return_value = Box::new(value)
-    }
 }

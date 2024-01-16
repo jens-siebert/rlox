@@ -1,3 +1,4 @@
+use crate::base::expr_result::ExprResult;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,6 +19,8 @@ pub enum RuntimeError {
     BlockExpected,
     #[error("Number of arguments does not match number of paramters.")]
     NonMatchingNumberOfArguments,
+    #[error(transparent)]
+    Return { ret_val: ExprResult },
 }
 
 pub trait Visitor<I, R> {

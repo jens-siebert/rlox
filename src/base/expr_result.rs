@@ -3,9 +3,10 @@ use crate::base::stmt::Stmt;
 use crate::base::visitor::RuntimeError;
 use crate::interpreter::interpreter::Interpreter;
 use std::fmt::Display;
+use thiserror::Error;
 
-#[derive(Clone, Default, PartialEq)]
-pub(crate) enum ExprResult {
+#[derive(Clone, Debug, Default, Error, PartialEq)]
+pub enum ExprResult {
     Number(f64),
     String(String),
     Boolean(bool),
@@ -67,8 +68,8 @@ pub(crate) trait Callable {
     ) -> Result<Box<ExprResult>, RuntimeError>;
 }
 
-#[derive(Clone, PartialEq)]
-pub(crate) struct Function {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Function {
     pub(crate) name: Token,
     pub(crate) params: Vec<Token>,
     pub(crate) body: Vec<Stmt>,

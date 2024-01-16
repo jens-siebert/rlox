@@ -37,21 +37,21 @@ impl Interpreter {
         &self,
         statements: &Vec<Stmt>,
     ) -> Result<Box<ExprResult>, RuntimeError> {
-        let mut return_value = Box::new(ExprResult::none());
         self.environment.borrow_mut().push_scope();
 
         for statement in statements {
-            self.execute(statement)?;
+            if let Err(e) = self.execute(statement) {
+                self.environment.borrow_mut().pop_scope();
 
-            if let Stmt::Return { .. } = *statement {
-                return_value = self.environment.borrow().get_return_value();
-                break;
+                return match e {
+                    RuntimeError::Return { ret_val } => Ok(ret_val.into()),
+                    _ => Err(e),
+                };
             }
         }
 
         self.environment.borrow_mut().pop_scope();
-
-        Ok(return_value)
+        Ok(ExprResult::none().into())
     }
 }
 
@@ -235,8 +235,8 @@ impl Visitor<Stmt, ()> for Interpreter {
             }
             Stmt::Return { value } => {
                 if let Some(expr) = *value.to_owned() {
-                    let result = *self.evaluate(&expr)?;
-                    self.environment.borrow_mut().set_return_value(result);
+                    let ret_val = *self.evaluate(&expr)?;
+                    return Err(RuntimeError::Return { ret_val });
                 }
             }
             Stmt::Var { name, initializer } => {
