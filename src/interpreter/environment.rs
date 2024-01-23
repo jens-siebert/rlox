@@ -8,6 +8,12 @@ struct Scope {
 }
 
 impl Scope {
+    fn new() -> Self {
+        Self {
+            values: HashMap::new(),
+        }
+    }
+
     fn define(&mut self, name: &str, value: ExprResult) {
         self.values.insert(name.to_string(), value);
     }
@@ -27,33 +33,36 @@ impl Scope {
     }
 }
 
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Environment {
-    current_scope: Scope,
-    parent_scopes: VecDeque<Scope>,
+    scopes: VecDeque<Scope>,
 }
 
 impl Environment {
+    pub(crate) fn new() -> Self {
+        let mut scopes = VecDeque::new();
+        scopes.push_front(Scope::new());
+
+        Self { scopes }
+    }
+
     pub(crate) fn push_scope(&mut self) {
-        let enclosing_scope = std::mem::take(&mut self.current_scope);
-        self.parent_scopes.push_front(enclosing_scope);
+        let enclosing_scope = Scope::default();
+        self.scopes.push_front(enclosing_scope);
     }
 
     pub(crate) fn pop_scope(&mut self) {
-        let parent_scope = self.parent_scopes.pop_front().unwrap();
-        self.current_scope = parent_scope;
+        self.scopes.pop_front();
     }
 
     pub(crate) fn define(&mut self, name: &str, value: ExprResult) {
-        self.current_scope.define(name, value);
+        if let Some(scope) = self.scopes.front_mut() {
+            scope.define(name, value);
+        }
     }
 
     pub(crate) fn get(&self, name: &str) -> Result<ExprResult, RuntimeError> {
-        if let Some(value) = self.current_scope.get(name) {
-            return Ok(value);
-        }
-
-        for scope in self.parent_scopes.iter() {
+        for scope in self.scopes.iter() {
             if let Some(value) = scope.get(name) {
                 return Ok(value);
             }
@@ -63,16 +72,18 @@ impl Environment {
     }
 
     pub(crate) fn assign(&mut self, name: &str, value: &ExprResult) -> Result<(), RuntimeError> {
-        if self.current_scope.assign(name, value).is_ok() {
-            return Ok(());
-        }
-
-        for scope in self.parent_scopes.iter_mut() {
+        for scope in self.scopes.iter_mut() {
             if scope.assign(name, value).is_ok() {
                 return Ok(());
             }
         }
 
         Err(RuntimeError::UndefinedVariable)
+    }
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Environment::new()
     }
 }

@@ -57,7 +57,7 @@ impl Interpreter {
 
 impl Default for Interpreter {
     fn default() -> Self {
-        Interpreter::new(Rc::new(RefCell::new(Environment::default())))
+        Interpreter::new(Rc::new(RefCell::new(Environment::new())))
     }
 }
 
