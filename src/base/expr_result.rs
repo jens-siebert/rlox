@@ -1,8 +1,11 @@
 use crate::base::scanner::Token;
 use crate::base::stmt::Stmt;
 use crate::base::visitor::RuntimeError;
+use crate::interpreter::environment::Environment;
 use crate::interpreter::interpreter::Interpreter;
+use std::cell::RefCell;
 use std::fmt::Display;
+use std::rc::Rc;
 use thiserror::Error;
 
 #[derive(Clone, Debug, Default, Error, PartialEq)]
@@ -73,6 +76,7 @@ pub struct Function {
     pub(crate) name: Token,
     pub(crate) params: Vec<Token>,
     pub(crate) body: Vec<Stmt>,
+    pub(crate) closure: Rc<RefCell<Environment>>,
 }
 
 impl Callable for Function {
@@ -85,11 +89,12 @@ impl Callable for Function {
         interpreter: &Interpreter,
         arguments: &Vec<ExprResult>,
     ) -> Result<Box<ExprResult>, RuntimeError> {
-        interpreter.environment.borrow_mut().push_scope();
+        let scoped_interpreter =
+            interpreter.fork(Environment::new_enclosing(Rc::clone(&self.closure)));
 
         for (i, token) in self.params.iter().enumerate() {
             if let Some(argument) = arguments.get(i) {
-                interpreter
+                scoped_interpreter
                     .environment
                     .borrow_mut()
                     .define(token.lexeme.as_str(), argument.clone());
@@ -98,10 +103,6 @@ impl Callable for Function {
             }
         }
 
-        let return_value = interpreter.execute_block(&self.body);
-
-        interpreter.environment.borrow_mut().pop_scope();
-
-        return_value
+        scoped_interpreter.execute_block(&self.body)
     }
 }

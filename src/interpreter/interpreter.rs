@@ -17,6 +17,10 @@ impl Interpreter {
         Self { environment }
     }
 
+    pub fn fork(&self, environment: Rc<RefCell<Environment>>) -> Self {
+        Self { environment }
+    }
+
     pub fn interpret(&self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
         for statement in statements {
             self.execute(&statement)?;
@@ -37,12 +41,8 @@ impl Interpreter {
         &self,
         statements: &Vec<Stmt>,
     ) -> Result<Box<ExprResult>, RuntimeError> {
-        self.environment.borrow_mut().push_scope();
-
         for statement in statements {
             if let Err(e) = self.execute(statement) {
-                self.environment.borrow_mut().pop_scope();
-
                 return match e {
                     RuntimeError::Return { ret_val } => Ok(ret_val.into()),
                     _ => Err(e),
@@ -50,7 +50,6 @@ impl Interpreter {
             }
         }
 
-        self.environment.borrow_mut().pop_scope();
         Ok(ExprResult::none().into())
     }
 }
@@ -210,6 +209,7 @@ impl Visitor<Stmt, ()> for Interpreter {
                     name: *name.clone(),
                     params: params.clone(),
                     body: body.clone(),
+                    closure: Environment::new_enclosing(Rc::clone(&self.environment)),
                 };
 
                 self.environment
