@@ -1,6 +1,6 @@
-pub mod expr;
-pub mod expr_result;
+pub(crate) mod expr;
+pub(crate) mod expr_result;
 pub mod parser;
 pub mod scanner;
-pub mod stmt;
-pub mod visitor;
+pub(crate) mod stmt;
+pub(crate) mod visitor;

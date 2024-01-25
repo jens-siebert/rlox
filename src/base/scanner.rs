@@ -51,13 +51,13 @@ pub enum TokenType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token {
-    pub token_type: TokenType,
-    pub lexeme: String,
-    pub line: usize,
+    pub(crate) token_type: TokenType,
+    pub(crate) lexeme: String,
+    line: usize,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
+    fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
         Token {
             token_type,
             lexeme,

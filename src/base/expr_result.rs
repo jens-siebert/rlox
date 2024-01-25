@@ -39,7 +39,7 @@ impl ExprResult {
         ExprResult::None
     }
 
-    pub(crate) fn is_truthy(&self) -> bool {
+    pub fn is_truthy(&self) -> bool {
         match *self {
             ExprResult::Boolean(value) => value,
             ExprResult::None => false,
@@ -62,7 +62,7 @@ impl Display for ExprResult {
     }
 }
 
-pub(crate) trait Callable {
+pub trait Callable {
     fn arity(&self) -> usize;
     fn call(
         &self,
@@ -73,10 +73,26 @@ pub(crate) trait Callable {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
-    pub(crate) name: Token,
-    pub(crate) params: Vec<Token>,
-    pub(crate) body: Vec<Stmt>,
-    pub(crate) closure: Rc<RefCell<Environment>>,
+    name: Token,
+    params: Vec<Token>,
+    body: Vec<Stmt>,
+    closure: Rc<RefCell<Environment>>,
+}
+
+impl Function {
+    pub fn new(
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+        closure: Rc<RefCell<Environment>>,
+    ) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            closure,
+        }
+    }
 }
 
 impl Callable for Function {

@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub(crate) environment: Rc<RefCell<Environment>>,
+    pub environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -29,18 +29,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
-        stmt.accept(self)
-    }
-
-    fn evaluate(&self, expr: &Expr) -> Result<Box<ExprResult>, RuntimeError> {
-        expr.accept(self)
-    }
-
-    pub(crate) fn execute_block(
-        &self,
-        statements: &Vec<Stmt>,
-    ) -> Result<Box<ExprResult>, RuntimeError> {
+    pub fn execute_block(&self, statements: &Vec<Stmt>) -> Result<Box<ExprResult>, RuntimeError> {
         for statement in statements {
             if let Err(e) = self.execute(statement) {
                 return match e {
@@ -51,6 +40,14 @@ impl Interpreter {
         }
 
         Ok(ExprResult::none().into())
+    }
+
+    fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        stmt.accept(self)
+    }
+
+    fn evaluate(&self, expr: &Expr) -> Result<Box<ExprResult>, RuntimeError> {
+        expr.accept(self)
     }
 }
 
@@ -205,12 +202,12 @@ impl Visitor<Stmt, ()> for Interpreter {
                 self.evaluate(expression)?;
             }
             Stmt::Function { name, params, body } => {
-                let callable = Function {
-                    name: *name.clone(),
-                    params: params.clone(),
-                    body: body.clone(),
-                    closure: Environment::new_enclosing(Rc::clone(&self.environment)),
-                };
+                let callable = Function::new(
+                    *name.to_owned(),
+                    params.to_owned(),
+                    body.to_owned(),
+                    Environment::new_enclosing(Rc::clone(&self.environment)),
+                );
 
                 self.environment
                     .borrow_mut()

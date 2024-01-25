@@ -51,8 +51,8 @@ pub enum ParserError {
 }
 
 pub struct Parser {
-    pub tokens: Vec<Token>,
-    pub current: RefCell<usize>,
+    tokens: Vec<Token>,
+    current: RefCell<usize>,
 }
 
 impl Parser {

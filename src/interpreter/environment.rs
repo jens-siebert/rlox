@@ -11,25 +11,25 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             enclosing: None,
             values: HashMap::new(),
         }
     }
 
-    pub(crate) fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
+    pub fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             enclosing: Some(enclosing),
             values: HashMap::new(),
         }))
     }
 
-    pub(crate) fn define(&mut self, name: &str, value: ExprResult) {
+    pub fn define(&mut self, name: &str, value: ExprResult) {
         self.values.insert(name.to_string(), value);
     }
 
-    pub(crate) fn get(&self, name: &str) -> Result<ExprResult, RuntimeError> {
+    pub fn get(&self, name: &str) -> Result<ExprResult, RuntimeError> {
         if let Some(value) = self.values.get(name) {
             return Ok(value.to_owned());
         }
@@ -41,7 +41,7 @@ impl Environment {
         Err(RuntimeError::UndefinedVariable)
     }
 
-    pub(crate) fn assign(&mut self, name: &str, value: &ExprResult) -> Result<(), RuntimeError> {
+    pub fn assign(&mut self, name: &str, value: &ExprResult) -> Result<(), RuntimeError> {
         if self.values.contains_key(name) {
             self.values.insert(name.to_string(), value.to_owned());
 
