@@ -110,10 +110,7 @@ impl Callable for Function {
 
         for (i, token) in self.params.iter().enumerate() {
             if let Some(argument) = arguments.get(i) {
-                scoped_interpreter
-                    .environment
-                    .borrow_mut()
-                    .define(token.lexeme.as_str(), argument.clone());
+                scoped_interpreter.define(token.lexeme.as_str(), argument.clone());
             } else {
                 return Err(RuntimeError::InvalidArgument);
             }

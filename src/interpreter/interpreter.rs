@@ -9,16 +9,25 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub environment: Rc<RefCell<Environment>>,
+    globals: Rc<RefCell<Environment>>,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
-    pub fn new(environment: Rc<RefCell<Environment>>) -> Self {
-        Self { environment }
+    pub fn new() -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new()));
+        let env = Rc::clone(&globals);
+        Self {
+            globals,
+            environment: env,
+        }
     }
 
     pub fn fork(&self, environment: Rc<RefCell<Environment>>) -> Self {
-        Self { environment }
+        Self {
+            globals: Rc::clone(&self.globals),
+            environment,
+        }
     }
 
     pub fn interpret(&self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
@@ -42,6 +51,10 @@ impl Interpreter {
         Ok(ExprResult::none().into())
     }
 
+    pub fn define(&self, name: &str, value: ExprResult) {
+        self.environment.borrow_mut().define(name, value);
+    }
+
     fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
         stmt.accept(self)
     }
@@ -53,7 +66,7 @@ impl Interpreter {
 
 impl Default for Interpreter {
     fn default() -> Self {
-        Interpreter::new(Rc::new(RefCell::new(Environment::new())))
+        Interpreter::new()
     }
 }
 
