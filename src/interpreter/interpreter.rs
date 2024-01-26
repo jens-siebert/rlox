@@ -158,7 +158,7 @@ impl Visitor<Expr, Box<ExprResult>> for Interpreter {
             }
             Expr::Grouping { expression } => self.evaluate(expression),
             Expr::Literal { value } => match value {
-                LiteralValue::Number(value) => Ok(ExprResult::number(*value).into()),
+                LiteralValue::Number(value) => Ok(ExprResult::number(value.into_inner()).into()),
                 LiteralValue::String(value) => Ok(ExprResult::string(value.clone()).into()),
                 LiteralValue::Boolean(value) => Ok(ExprResult::boolean(*value).into()),
                 LiteralValue::None => Ok(ExprResult::none().into()),

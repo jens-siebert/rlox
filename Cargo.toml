@@ -11,3 +11,4 @@ name = "rlox"
 [dependencies]
 clap = { version = "4.3", features = ["derive"] }
 thiserror = "1.0"
+ordered-float = "4.2"

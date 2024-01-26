@@ -1,15 +1,16 @@
 use crate::base::scanner::Token;
 use crate::base::visitor::{RuntimeError, Visitor};
+use ordered_float::OrderedFloat;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LiteralValue {
-    Number(f64),
+    Number(OrderedFloat<f64>),
     String(String),
     Boolean(bool),
     None,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

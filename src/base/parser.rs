@@ -441,7 +441,7 @@ impl Parser {
         match &self.peek()?.token_type {
             TokenType::Number { value } => {
                 self.advance()?;
-                return Ok(Expr::literal(LiteralValue::Number(*value)));
+                return Ok(Expr::literal(LiteralValue::Number(value.to_owned())));
             }
             TokenType::String { value } => {
                 self.advance()?;

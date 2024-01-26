@@ -1,8 +1,9 @@
+use ordered_float::OrderedFloat;
 use std::str::FromStr;
 
 use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -27,7 +28,7 @@ pub enum TokenType {
 
     Identifier,
     String { value: String },
-    Number { value: f64 },
+    Number { value: OrderedFloat<f64> },
 
     And,
     Class,
@@ -49,7 +50,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Token {
     pub(crate) token_type: TokenType,
     pub(crate) lexeme: String,
@@ -217,7 +218,9 @@ impl Scanner {
             .iter()
             .collect();
         self.tokens.push(Token::new(
-            TokenType::Number { value },
+            TokenType::Number {
+                value: OrderedFloat(value),
+            },
             token_string,
             self.current_line,
         ));
