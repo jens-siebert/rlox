@@ -68,7 +68,7 @@ pub trait Callable {
         &self,
         interpreter: &Interpreter,
         arguments: &Vec<ExprResult>,
-    ) -> Result<Box<ExprResult>, RuntimeError>;
+    ) -> Result<ExprResult, RuntimeError>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -104,7 +104,7 @@ impl Callable for Function {
         &self,
         interpreter: &Interpreter,
         arguments: &Vec<ExprResult>,
-    ) -> Result<Box<ExprResult>, RuntimeError> {
+    ) -> Result<ExprResult, RuntimeError> {
         let scoped_interpreter =
             interpreter.fork(Environment::new_enclosing(Rc::clone(&self.closure)));
 

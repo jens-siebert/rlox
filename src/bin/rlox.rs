@@ -23,7 +23,7 @@ impl LoxEnvironment {
         let parser = Parser::new(tokens);
         let statements = parser.parse()?;
 
-        self.interpreter.interpret(statements)?;
+        self.interpreter.interpret(&statements)?;
 
         Ok(())
     }
