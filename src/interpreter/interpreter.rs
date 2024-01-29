@@ -1,16 +1,19 @@
 use crate::base::expr::{Expr, LiteralValue};
 use crate::base::expr_result::ExprResult;
 use crate::base::expr_result::{Callable, Function};
-use crate::base::scanner::TokenType;
+use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::Stmt;
 use crate::base::visitor::{RuntimeError, Visitor};
 use crate::interpreter::environment::Environment;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
+use uuid::Uuid;
 
 pub struct Interpreter {
     globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
+    locals: RefCell<HashMap<Uuid, usize>>,
 }
 
 impl Interpreter {
@@ -20,6 +23,7 @@ impl Interpreter {
         Self {
             globals,
             environment: env,
+            locals: RefCell::new(HashMap::new()),
         }
     }
 
@@ -27,6 +31,7 @@ impl Interpreter {
         Self {
             globals: Rc::clone(&self.globals),
             environment,
+            locals: self.locals.clone(),
         }
     }
 
@@ -55,12 +60,26 @@ impl Interpreter {
         self.environment.borrow_mut().define(name, value);
     }
 
+    pub fn resolve(&self, uuid: &Uuid, depth: usize) {
+        self.locals.borrow_mut().insert(uuid.to_owned(), depth);
+    }
+
     fn execute(&self, stmt: &Stmt) -> Result<(), RuntimeError> {
         stmt.accept(self)
     }
 
     fn evaluate(&self, expr: &Expr) -> Result<ExprResult, RuntimeError> {
         expr.accept(self)
+    }
+
+    fn lookup_variable(&self, name: &Token, uuid: &Uuid) -> Result<ExprResult, RuntimeError> {
+        if let Some(distance) = self.locals.borrow().get(uuid) {
+            self.environment
+                .borrow()
+                .get_at(distance.to_owned(), name.lexeme.as_str())
+        } else {
+            self.globals.borrow().get(name.lexeme.as_str())
+        }
     }
 }
 
@@ -74,6 +93,7 @@ impl Visitor<Expr, ExprResult> for Interpreter {
     fn visit(&self, input: &Expr) -> Result<ExprResult, RuntimeError> {
         match input {
             Expr::Binary {
+                uuid: _uuid,
                 left,
                 operator,
                 right,
@@ -138,7 +158,11 @@ impl Visitor<Expr, ExprResult> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
-            Expr::Call { callee, arguments } => {
+            Expr::Call {
+                uuid: _uuid,
+                callee,
+                arguments,
+            } => {
                 let call = self.evaluate(callee)?;
 
                 if let ExprResult::Callable(callable) = call {
@@ -156,14 +180,18 @@ impl Visitor<Expr, ExprResult> for Interpreter {
                     Err(RuntimeError::UndefinedCallable)
                 }
             }
-            Expr::Grouping { expression } => self.evaluate(expression),
-            Expr::Literal { value } => match value {
+            Expr::Grouping {
+                uuid: _uuid,
+                expression,
+            } => self.evaluate(expression),
+            Expr::Literal { uuid: _uuid, value } => match value {
                 LiteralValue::Number(value) => Ok(ExprResult::number(value.into_inner())),
                 LiteralValue::String(value) => Ok(ExprResult::string(value.clone())),
                 LiteralValue::Boolean(value) => Ok(ExprResult::boolean(*value)),
                 LiteralValue::None => Ok(ExprResult::none()),
             },
             Expr::Logical {
+                uuid: _uuid,
                 left,
                 operator,
                 right,
@@ -180,7 +208,11 @@ impl Visitor<Expr, ExprResult> for Interpreter {
 
                 self.evaluate(right)
             }
-            Expr::Unary { operator, right } => {
+            Expr::Unary {
+                uuid: _uuid,
+                operator,
+                right,
+            } => {
                 let right = self.evaluate(right)?;
 
                 match &operator.token_type {
@@ -192,13 +224,20 @@ impl Visitor<Expr, ExprResult> for Interpreter {
                     _ => Err(RuntimeError::InvalidValue),
                 }
             }
-            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
-                Ok(value) => Ok(value),
-                Err(_) => Err(RuntimeError::UndefinedVariable),
-            },
-            Expr::Assign { name, value } => {
+            Expr::Variable { uuid, name } => self.lookup_variable(name, uuid),
+            Expr::Assign { uuid, name, value } => {
                 let v = self.evaluate(value)?;
-                self.environment.borrow_mut().assign(&name.lexeme, &v)?;
+
+                if let Some(distance) = self.locals.borrow().get(uuid) {
+                    self.environment.borrow_mut().assign_at(
+                        distance.to_owned(),
+                        name.lexeme.as_str(),
+                        &v,
+                    )?;
+                } else {
+                    self.globals.borrow_mut().assign(name.lexeme.as_str(), &v)?;
+                }
+
                 Ok(v)
             }
         }
@@ -209,7 +248,9 @@ impl Visitor<Stmt, ()> for Interpreter {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
-                self.execute_block(statements)?;
+                let scoped_interpreter =
+                    self.fork(Environment::new_enclosing(Rc::clone(&self.environment)));
+                scoped_interpreter.execute_block(statements)?;
             }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
@@ -219,7 +260,7 @@ impl Visitor<Stmt, ()> for Interpreter {
                     *name.to_owned(),
                     params.to_owned(),
                     body.to_owned(),
-                    Environment::new_enclosing(Rc::clone(&self.environment)),
+                    Rc::clone(&self.environment),
                 );
 
                 self.environment

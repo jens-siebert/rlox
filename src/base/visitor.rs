@@ -9,16 +9,22 @@ pub enum RuntimeError {
     NumberExpected,
     #[error("Number or String expected.")]
     NumberOrStringExpected,
-    #[error("Undefined variable.")]
-    UndefinedVariable,
+    #[error("Undefined variable {name}.")]
+    UndefinedVariable { name: String },
     #[error("Undefined callable.")]
     UndefinedCallable,
     #[error("Invalid argument.")]
     InvalidArgument,
     #[error("Block expected.")]
     BlockExpected,
-    #[error("Number of arguments does not match number of paramters.")]
+    #[error("Number of arguments does not match number of parameters.")]
     NonMatchingNumberOfArguments,
+    #[error("Can't read local variable in its own initializer.")]
+    VariableNotDefined,
+    #[error("Already a variable with this name in this scope.")]
+    VariableAlreadyDefinedInScope,
+    #[error("Can't return from top-level code.")]
+    TopLevelReturn,
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

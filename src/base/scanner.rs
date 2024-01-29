@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -50,7 +50,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub(crate) token_type: TokenType,
     pub(crate) lexeme: String,

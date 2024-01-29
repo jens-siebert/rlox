@@ -12,3 +12,4 @@ name = "rlox"
 clap = { version = "4.3", features = ["derive"] }
 thiserror = "1.0"
 ordered-float = "4.2"
+uuid = { version = "1.7", features = ["v4", "fast-rng"]}

@@ -2,17 +2,19 @@ use clap::Parser as ClapParser;
 use rlox::base::parser::Parser;
 use rlox::base::scanner::Scanner;
 use rlox::interpreter::interpreter::Interpreter;
+use rlox::interpreter::resolver::Resolver;
 use std::fs;
 use std::io::Write;
+use std::rc::Rc;
 
 struct LoxEnvironment {
-    interpreter: Interpreter,
+    interpreter: Rc<Interpreter>,
 }
 
 impl LoxEnvironment {
     fn new() -> Self {
         LoxEnvironment {
-            interpreter: Interpreter::new(),
+            interpreter: Rc::new(Interpreter::new()),
         }
     }
 
@@ -22,6 +24,9 @@ impl LoxEnvironment {
 
         let parser = Parser::new(tokens);
         let statements = parser.parse()?;
+
+        let resolver = Resolver::new(Rc::clone(&self.interpreter));
+        resolver.resolve_stmts(&statements)?;
 
         self.interpreter.interpret(&statements)?;
 
