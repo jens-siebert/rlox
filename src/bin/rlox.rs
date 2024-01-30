@@ -3,6 +3,7 @@ use rlox::base::parser::Parser;
 use rlox::base::scanner::Scanner;
 use rlox::interpreter::interpreter::Interpreter;
 use rlox::interpreter::resolver::Resolver;
+use std::cell::RefCell;
 use std::fs;
 use std::io::{stdout, Write};
 use std::rc::Rc;
@@ -14,7 +15,7 @@ struct LoxEnvironment<'a> {
 impl LoxEnvironment<'_> {
     fn new() -> Self {
         LoxEnvironment {
-            interpreter: Rc::new(Interpreter::new(stdout())),
+            interpreter: Rc::new(Interpreter::new(Rc::new(RefCell::new(stdout())))),
         }
     }
 

@@ -20,7 +20,7 @@ pub struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new<OutputWriter>(output_stream: OutputWriter) -> Self
+    pub fn new<OutputWriter>(output_stream: Rc<RefCell<OutputWriter>>) -> Self
     where
         OutputWriter: Write + 'a,
     {
@@ -30,7 +30,7 @@ impl<'a> Interpreter<'a> {
             globals,
             environment: env,
             locals: RefCell::new(HashMap::new()),
-            output_stream: Rc::new(RefCell::new(output_stream)),
+            output_stream,
         }
     }
 
@@ -93,7 +93,7 @@ impl<'a> Interpreter<'a> {
 
 impl Default for Interpreter<'_> {
     fn default() -> Self {
-        Interpreter::new(stdout())
+        Interpreter::new(Rc::new(RefCell::new(stdout())))
     }
 }
 
