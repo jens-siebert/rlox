@@ -23,5 +23,6 @@ pub fn interpret(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     let output = std::str::from_utf8(buf.borrow().as_slice())
         .unwrap()
         .to_string();
+
     Ok(output)
 }

@@ -1,8 +1,7 @@
 mod common;
-#[test]
-fn test_scope() {
-    let result = common::interpret(
-        r###"var a = "global a";
+
+const INPUT: &str = r###"
+var a = "global a";
 var b = "global b";
 var c = "global c";
 {
@@ -21,13 +20,10 @@ var c = "global c";
 print a;
 print b;
 print c;
-    "###,
-    )
-    .unwrap();
+"###;
 
-    assert_eq!(
-        result,
-        r###"inner a
+const RESULT: &str = r###"
+inner a
 outer b
 global c
 outer a
@@ -36,6 +32,12 @@ global c
 global a
 global b
 global c
-"###
+"###;
+
+#[test]
+fn test_scope() {
+    assert_eq!(
+        common::interpret(INPUT).unwrap(),
+        RESULT.strip_prefix('\n').unwrap()
     )
 }
