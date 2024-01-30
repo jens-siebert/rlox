@@ -1,3 +1,5 @@
+![basic workflow](https://github.com/jens-siebert/rlox/actions/workflows/rlox.yml/badge.svg)
+
 # Project
 
 Rust-based implementation of the lox language interpreter from the book ["Crafting Interpreters"](https://craftinginterpreters.com)
