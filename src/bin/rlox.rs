@@ -4,17 +4,17 @@ use rlox::base::scanner::Scanner;
 use rlox::interpreter::interpreter::Interpreter;
 use rlox::interpreter::resolver::Resolver;
 use std::fs;
-use std::io::Write;
+use std::io::{stdout, Write};
 use std::rc::Rc;
 
-struct LoxEnvironment {
-    interpreter: Rc<Interpreter>,
+struct LoxEnvironment<'a> {
+    interpreter: Rc<Interpreter<'a>>,
 }
 
-impl LoxEnvironment {
+impl LoxEnvironment<'_> {
     fn new() -> Self {
         LoxEnvironment {
-            interpreter: Rc::new(Interpreter::new()),
+            interpreter: Rc::new(Interpreter::new(stdout())),
         }
     }
 
@@ -37,7 +37,7 @@ impl LoxEnvironment {
         println!("Lox interpreter...");
         loop {
             print!("> ");
-            let _ = std::io::stdout().flush();
+            let _ = stdout().flush();
             let mut input = String::new();
             std::io::stdin()
                 .read_line(&mut input)

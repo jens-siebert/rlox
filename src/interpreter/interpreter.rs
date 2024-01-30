@@ -7,23 +7,30 @@ use crate::base::visitor::{RuntimeError, Visitor};
 use crate::interpreter::environment::Environment;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::io::stdout;
+use std::io::Write;
 use std::rc::Rc;
 use uuid::Uuid;
 
-pub struct Interpreter {
+pub struct Interpreter<'a> {
     globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
     locals: RefCell<HashMap<Uuid, usize>>,
+    output_stream: Rc<RefCell<dyn Write + 'a>>,
 }
 
-impl Interpreter {
-    pub fn new() -> Self {
+impl<'a> Interpreter<'a> {
+    pub fn new<OutputWriter>(output_stream: OutputWriter) -> Self
+    where
+        OutputWriter: Write + 'a,
+    {
         let globals = Rc::new(RefCell::new(Environment::new()));
         let env = Rc::clone(&globals);
         Self {
             globals,
             environment: env,
             locals: RefCell::new(HashMap::new()),
+            output_stream: Rc::new(RefCell::new(output_stream)),
         }
     }
 
@@ -32,6 +39,7 @@ impl Interpreter {
             globals: Rc::clone(&self.globals),
             environment,
             locals: self.locals.clone(),
+            output_stream: Rc::clone(&self.output_stream),
         }
     }
 
@@ -83,13 +91,13 @@ impl Interpreter {
     }
 }
 
-impl Default for Interpreter {
+impl Default for Interpreter<'_> {
     fn default() -> Self {
-        Interpreter::new()
+        Interpreter::new(stdout())
     }
 }
 
-impl Visitor<Expr, ExprResult> for Interpreter {
+impl Visitor<Expr, ExprResult> for Interpreter<'_> {
     fn visit(&self, input: &Expr) -> Result<ExprResult, RuntimeError> {
         match input {
             Expr::Binary {
@@ -244,7 +252,7 @@ impl Visitor<Expr, ExprResult> for Interpreter {
     }
 }
 
-impl Visitor<Stmt, ()> for Interpreter {
+impl Visitor<Stmt, ()> for Interpreter<'_> {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
@@ -282,7 +290,9 @@ impl Visitor<Stmt, ()> for Interpreter {
             }
             Stmt::Print { expression } => {
                 let value = self.evaluate(expression)?;
-                println!("{}", value);
+                let mut stream = self.output_stream.borrow_mut();
+                writeln!(stream, "{}", value).map_err(|_| RuntimeError::OutputError)?;
+                stream.flush().map_err(|_| RuntimeError::OutputError)?;
             }
             Stmt::Return { value } => {
                 if let Some(expr) = *value.to_owned() {

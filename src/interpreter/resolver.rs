@@ -13,14 +13,14 @@ enum FunctionType {
     Function,
 }
 
-pub struct Resolver {
-    interpreter: Rc<Interpreter>,
+pub struct Resolver<'a> {
+    interpreter: Rc<Interpreter<'a>>,
     scopes: RefCell<Vec<HashMap<String, bool>>>,
     current_function_type: RefCell<FunctionType>,
 }
 
-impl Resolver {
-    pub fn new(interpreter: Rc<Interpreter>) -> Self {
+impl<'a> Resolver<'a> {
+    pub fn new(interpreter: Rc<Interpreter<'a>>) -> Self {
         Self {
             interpreter,
             scopes: RefCell::new(Vec::new()),
@@ -117,7 +117,7 @@ impl Resolver {
     }
 }
 
-impl Visitor<Stmt, ()> for Resolver {
+impl Visitor<Stmt, ()> for Resolver<'_> {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
@@ -175,7 +175,7 @@ impl Visitor<Stmt, ()> for Resolver {
     }
 }
 
-impl Visitor<Expr, ()> for Resolver {
+impl Visitor<Expr, ()> for Resolver<'_> {
     fn visit(&self, input: &Expr) -> Result<(), RuntimeError> {
         match input {
             Expr::Binary {

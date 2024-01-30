@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum RuntimeError {
+    #[error("Output error.")]
+    OutputError,
     #[error("Invalid value.")]
     InvalidValue,
     #[error("Number expected.")]
