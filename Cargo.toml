@@ -1,15 +1,7 @@
-[package]
-name = "rlox"
-description = "Rust-based implementation of the first lox language interpreter from the book 'Crafting Interpreters'"
-authors = ["Jens Siebert"]
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[[bin]]
-name = "rlox"
+members = [
+    "rlox-lib",
+]
 
-[dependencies]
-clap = { version = "4.3", features = ["derive"] }
-thiserror = "1.0"
-ordered-float = "4.2"
-uuid = { version = "1.7", features = ["v4", "fast-rng"]}
+resolver = "2"

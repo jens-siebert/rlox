@@ -1,8 +1,8 @@
 use clap::Parser as ClapParser;
-use rlox::base::parser::Parser;
-use rlox::base::scanner::Scanner;
-use rlox::interpreter::interpreter::Interpreter;
-use rlox::interpreter::resolver::Resolver;
+use rlox_lib::base::parser::Parser;
+use rlox_lib::base::scanner::Scanner;
+use rlox_lib::interpreter::interpreter::Interpreter;
+use rlox_lib::interpreter::resolver::Resolver;
 use std::cell::RefCell;
 use std::fs;
 use std::io::{stdout, Write};
