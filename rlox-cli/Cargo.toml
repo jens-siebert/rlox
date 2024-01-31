@@ -1,0 +1,13 @@
+[package]
+name = "rlox-cli"
+description = "Rust-based implementation of the first lox language interpreter from the book 'Crafting Interpreters' (cli)"
+authors = ["Jens Siebert"]
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rlox"
+
+[dependencies]
+clap = { version = "4.3", features = ["derive"] }
+rlox-lib = { path = "../rlox-lib" }

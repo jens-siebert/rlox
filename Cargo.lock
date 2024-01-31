@@ -204,10 +204,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlox-lib"
+name = "rlox-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "rlox-lib",
+]
+
+[[package]]
+name = "rlox-lib"
+version = "0.1.0"
+dependencies = [
  "ordered-float",
  "thiserror",
  "uuid",
