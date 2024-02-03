@@ -1,6 +1,6 @@
 use crate::base::expr::{Expr, LiteralValue};
 use crate::base::expr_result::ExprResult;
-use crate::base::expr_result::{Callable, Function};
+use crate::base::expr_result::{Callable, LoxFunction};
 use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::Stmt;
 use crate::base::visitor::Visitor;
@@ -191,7 +191,7 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
             } => {
                 let call = self.evaluate(callee)?;
 
-                if let ExprResult::Callable(callable) = call {
+                if let ExprResult::Function(callable) = call {
                     if arguments.len() != callable.arity() {
                         return Err(RuntimeError::NonMatchingNumberOfArguments {
                             line: paren.line,
@@ -286,7 +286,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                 self.evaluate(expression)?;
             }
             Stmt::Function { name, params, body } => {
-                let callable = Function::new(
+                let callable = LoxFunction::new(
                     *name.to_owned(),
                     params.to_owned(),
                     body.to_owned(),
@@ -295,7 +295,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
 
                 self.environment
                     .borrow_mut()
-                    .define(name.lexeme.as_str(), ExprResult::callable(callable.clone()));
+                    .define(name.lexeme.as_str(), ExprResult::function(callable.clone()));
             }
             Stmt::If {
                 condition,
