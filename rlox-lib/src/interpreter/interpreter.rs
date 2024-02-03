@@ -44,7 +44,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    pub fn interpret(&self, statements: &Vec<Stmt>) -> Result<(), RuntimeError> {
+    pub fn interpret(&self, statements: &[Stmt]) -> Result<(), RuntimeError> {
         for statement in statements {
             self.execute(statement)?;
         }
@@ -52,7 +52,7 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    pub fn execute_block(&self, statements: &Vec<Stmt>) -> Result<ExprResult, RuntimeError> {
+    pub fn execute_block(&self, statements: &[Stmt]) -> Result<ExprResult, RuntimeError> {
         for statement in statements {
             if let Err(e) = self.execute(statement) {
                 return match e {

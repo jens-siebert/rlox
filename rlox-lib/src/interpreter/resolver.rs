@@ -29,7 +29,7 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub fn resolve_stmts(&self, statements: &Vec<Stmt>) -> Result<(), RuntimeError> {
+    pub fn resolve_stmts(&self, statements: &[Stmt]) -> Result<(), RuntimeError> {
         for statement in statements {
             self.resolve_stmt(statement)?
         }

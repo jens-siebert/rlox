@@ -67,7 +67,7 @@ pub trait Callable {
     fn call(
         &self,
         interpreter: &Interpreter,
-        arguments: &Vec<ExprResult>,
+        arguments: &[ExprResult],
     ) -> Result<ExprResult, RuntimeError>;
 }
 
@@ -103,7 +103,7 @@ impl Callable for Function {
     fn call(
         &self,
         interpreter: &Interpreter,
-        arguments: &Vec<ExprResult>,
+        arguments: &[ExprResult],
     ) -> Result<ExprResult, RuntimeError> {
         let scoped_interpreter =
             interpreter.fork(Environment::new_enclosing(Rc::clone(&self.closure)));
