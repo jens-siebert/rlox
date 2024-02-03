@@ -8,46 +8,46 @@ use thiserror::Error;
 pub enum ParserError {
     #[error("Error while reading token.")]
     TokenReadError,
-    #[error("Unknown token detected.")]
-    MissingExpression,
-    #[error("Expect '(' after function name.")]
-    MissingLeftParenthesisAfterFunctionName,
-    #[error("Expect '(' after 'if' statement.")]
-    MissingLeftParenthesisAfterIfStatement,
-    #[error("Expect '(' after 'while' statement.")]
-    MissingLeftParenthesisAfterWhileStatement,
-    #[error("Expect '(' after 'for' statement.")]
-    MissingLeftParenthesisAfterForStatement,
-    #[error("Expect '{{' before function body.")]
-    MissingLeftBraceBeforeFunctionBody,
-    #[error("Expect ')' after expression.")]
-    MissingRightParenthesisAfterExpression,
-    #[error("Expect ')' after condition.")]
-    MissingRightParenthesisAfterCondition,
-    #[error("Expect ')' after 'for' statement.")]
-    MissingRightParenthesisAfterForStatement,
-    #[error("Expect ')' after parameters.")]
-    MissingRightParenthesisAfterParameters,
-    #[error("Expect ')' after arguments.")]
-    MissingRightParenthesisAfterArguments,
-    #[error("Expect '}}' after block.")]
-    MissingRightBraceAfterBlock,
-    #[error("Expect ';' after value.")]
-    MissingSemicolonAfterValue,
-    #[error("Expect ';' after expression.")]
-    MissingSemicolonAfterExpression,
-    #[error("Expect ';' after variable declaration.")]
-    MissingSemicolonAfterVariableDeclaration,
-    #[error("Expect ';' after loop condition.")]
-    MissingSemicolonAfterLoopCondition,
-    #[error("Expect variable name.")]
-    MissingVariableName,
-    #[error("Expect function name.")]
-    MissingFunctionName,
-    #[error("Expect function name.")]
-    MissingParameterName,
-    #[error("Invalid assignment target.")]
-    InvalidAssignmentTarget,
+    #[error("{line:?}: Unknown token detected.")]
+    MissingExpression { line: usize },
+    #[error("{line:?}: Expect '(' after function name.")]
+    MissingLeftParenthesisAfterFunctionName { line: usize },
+    #[error("{line:?}: Expect '(' after 'if' statement.")]
+    MissingLeftParenthesisAfterIfStatement { line: usize },
+    #[error("{line:?}: Expect '(' after 'while' statement.")]
+    MissingLeftParenthesisAfterWhileStatement { line: usize },
+    #[error("{line:?}: Expect '(' after 'for' statement.")]
+    MissingLeftParenthesisAfterForStatement { line: usize },
+    #[error("{line:?}: Expect '{{' before function body.")]
+    MissingLeftBraceBeforeFunctionBody { line: usize },
+    #[error("{line:?}: Expect ')' after expression.")]
+    MissingRightParenthesisAfterExpression { line: usize },
+    #[error("{line:?}: Expect ')' after condition.")]
+    MissingRightParenthesisAfterCondition { line: usize },
+    #[error("{line:?}: Expect ')' after 'for' statement.")]
+    MissingRightParenthesisAfterForStatement { line: usize },
+    #[error("{line:?}: Expect ')' after parameters.")]
+    MissingRightParenthesisAfterParameters { line: usize },
+    #[error("{line:?}: Expect ')' after arguments.")]
+    MissingRightParenthesisAfterArguments { line: usize },
+    #[error("{line:?}: Expect '}}' after block.")]
+    MissingRightBraceAfterBlock { line: usize },
+    #[error("{line:?}: Expect ';' after value.")]
+    MissingSemicolonAfterValue { line: usize },
+    #[error("{line:?}: Expect ';' after expression.")]
+    MissingSemicolonAfterExpression { line: usize },
+    #[error("{line:?}: Expect ';' after variable declaration.")]
+    MissingSemicolonAfterVariableDeclaration { line: usize },
+    #[error("{line:?}: Expect ';' after loop condition.")]
+    MissingSemicolonAfterLoopCondition { line: usize },
+    #[error("{line:?}: Expect variable name.")]
+    MissingVariableName { line: usize },
+    #[error("{line:?}: Expect function name.")]
+    MissingFunctionName { line: usize },
+    #[error("{line:?}: Expect function name.")]
+    MissingParameterName { line: usize },
+    #[error("{line:?}: Invalid assignment target.")]
+    InvalidAssignmentTarget { line: usize },
 }
 
 pub struct Parser {
@@ -83,18 +83,29 @@ impl Parser {
     }
 
     fn function(&self) -> Result<Stmt, ParserError> {
-        let name = self.consume(TokenType::Identifier, ParserError::MissingFunctionName)?;
+        let name = self.consume(
+            TokenType::Identifier,
+            ParserError::MissingFunctionName {
+                line: self.peek().unwrap().line,
+            },
+        )?;
         self.consume(
             TokenType::LeftParen,
-            ParserError::MissingLeftParenthesisAfterFunctionName,
+            ParserError::MissingLeftParenthesisAfterFunctionName {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let mut parameters = vec![];
 
         if !self.check(TokenType::RightParen)? {
             loop {
-                let parameter =
-                    self.consume(TokenType::Identifier, ParserError::MissingParameterName)?;
+                let parameter = self.consume(
+                    TokenType::Identifier,
+                    ParserError::MissingParameterName {
+                        line: self.peek().unwrap().line,
+                    },
+                )?;
 
                 parameters.push(parameter);
 
@@ -106,11 +117,15 @@ impl Parser {
 
         self.consume(
             TokenType::RightParen,
-            ParserError::MissingRightParenthesisAfterParameters,
+            ParserError::MissingRightParenthesisAfterParameters {
+                line: self.peek().unwrap().line,
+            },
         )?;
         self.consume(
             TokenType::LeftBrace,
-            ParserError::MissingLeftBraceBeforeFunctionBody,
+            ParserError::MissingLeftBraceBeforeFunctionBody {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let body = self.block()?;
@@ -119,7 +134,12 @@ impl Parser {
     }
 
     fn variable_declaration(&self) -> Result<Stmt, ParserError> {
-        let name = self.consume(TokenType::Identifier, ParserError::MissingVariableName)?;
+        let name = self.consume(
+            TokenType::Identifier,
+            ParserError::MissingVariableName {
+                line: self.peek().unwrap().line,
+            },
+        )?;
         let initializer = if self.match_token_types(&[TokenType::Equal])? {
             self.expression()?
         } else {
@@ -128,7 +148,9 @@ impl Parser {
 
         self.consume(
             TokenType::Semicolon,
-            ParserError::MissingSemicolonAfterVariableDeclaration,
+            ParserError::MissingSemicolonAfterVariableDeclaration {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         Ok(Stmt::var(name, initializer))
@@ -156,7 +178,9 @@ impl Parser {
     fn for_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
-            ParserError::MissingLeftParenthesisAfterForStatement,
+            ParserError::MissingLeftParenthesisAfterForStatement {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let initializer = if self.match_token_types(&[TokenType::Semicolon])? {
@@ -175,7 +199,9 @@ impl Parser {
 
         self.consume(
             TokenType::Semicolon,
-            ParserError::MissingSemicolonAfterLoopCondition,
+            ParserError::MissingSemicolonAfterLoopCondition {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let increment = if !self.check(TokenType::RightParen)? {
@@ -186,7 +212,9 @@ impl Parser {
 
         self.consume(
             TokenType::RightParen,
-            ParserError::MissingRightParenthesisAfterForStatement,
+            ParserError::MissingRightParenthesisAfterForStatement {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let mut body = self.statement()?;
@@ -207,13 +235,17 @@ impl Parser {
     fn if_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
-            ParserError::MissingLeftParenthesisAfterIfStatement,
+            ParserError::MissingLeftParenthesisAfterIfStatement {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let condition = self.expression()?;
         self.consume(
             TokenType::RightParen,
-            ParserError::MissingRightParenthesisAfterCondition,
+            ParserError::MissingRightParenthesisAfterCondition {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let then_branch = self.statement()?;
@@ -230,12 +262,15 @@ impl Parser {
         let value = self.expression()?;
         self.consume(
             TokenType::Semicolon,
-            ParserError::MissingSemicolonAfterValue,
+            ParserError::MissingSemicolonAfterValue {
+                line: self.peek().unwrap().line,
+            },
         )?;
         Ok(Stmt::print(value))
     }
 
     fn return_statement(&self) -> Result<Stmt, ParserError> {
+        let keyword = self.previous()?;
         let expr = if !self.check(TokenType::Semicolon)? {
             Some(self.expression()?)
         } else {
@@ -244,22 +279,28 @@ impl Parser {
 
         self.consume(
             TokenType::Semicolon,
-            ParserError::MissingSemicolonAfterExpression,
+            ParserError::MissingSemicolonAfterExpression {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
-        Ok(Stmt::return_stmt(expr))
+        Ok(Stmt::return_stmt(keyword, expr))
     }
 
     fn while_statement(&self) -> Result<Stmt, ParserError> {
         self.consume(
             TokenType::LeftParen,
-            ParserError::MissingLeftParenthesisAfterWhileStatement,
+            ParserError::MissingLeftParenthesisAfterWhileStatement {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let condition = self.expression()?;
         self.consume(
             TokenType::RightParen,
-            ParserError::MissingRightParenthesisAfterCondition,
+            ParserError::MissingRightParenthesisAfterCondition {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         let body = self.statement()?;
@@ -276,7 +317,9 @@ impl Parser {
 
         self.consume(
             TokenType::RightBrace,
-            ParserError::MissingRightBraceAfterBlock,
+            ParserError::MissingRightBraceAfterBlock {
+                line: self.peek().unwrap().line,
+            },
         )?;
 
         Ok(statements)
@@ -286,7 +329,9 @@ impl Parser {
         let value = self.expression()?;
         self.consume(
             TokenType::Semicolon,
-            ParserError::MissingSemicolonAfterExpression,
+            ParserError::MissingSemicolonAfterExpression {
+                line: self.peek().unwrap().line,
+            },
         )?;
         Ok(Stmt::expression(value))
     }
@@ -303,7 +348,9 @@ impl Parser {
 
             return match expr {
                 Expr::Variable { uuid: _uuid, name } => Ok(Expr::assign(*name, value)),
-                _ => Err(ParserError::InvalidAssignmentTarget),
+                _ => Err(ParserError::InvalidAssignmentTarget {
+                    line: self.peek().unwrap().line,
+                }),
             };
         }
 
@@ -413,12 +460,14 @@ impl Parser {
                     }
                 }
 
-                self.consume(
+                let paren = self.consume(
                     TokenType::RightParen,
-                    ParserError::MissingRightParenthesisAfterArguments,
+                    ParserError::MissingRightParenthesisAfterArguments {
+                        line: self.peek().unwrap().line,
+                    },
                 )?;
 
-                expr = Expr::call(expr, arguments);
+                expr = Expr::call(paren, expr, arguments);
             } else {
                 break;
             }
@@ -458,12 +507,16 @@ impl Parser {
             let expr = self.expression()?;
             self.consume(
                 TokenType::RightParen,
-                ParserError::MissingRightParenthesisAfterExpression,
+                ParserError::MissingRightParenthesisAfterExpression {
+                    line: self.peek().unwrap().line,
+                },
             )?;
             return Ok(Expr::grouping(expr));
         }
 
-        Err(ParserError::MissingExpression)
+        Err(ParserError::MissingExpression {
+            line: self.peek().unwrap().line,
+        })
     }
 
     fn peek(&self) -> Result<Token, ParserError> {

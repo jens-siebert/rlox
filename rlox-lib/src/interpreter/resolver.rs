@@ -56,7 +56,7 @@ impl<'a> Resolver<'a> {
     fn declare(&self, name: &Token) -> Result<(), RuntimeError> {
         if let Some(scope) = self.scopes.borrow_mut().last_mut() {
             if scope.contains_key(&name.lexeme) {
-                return Err(RuntimeError::VariableAlreadyDefinedInScope);
+                return Err(RuntimeError::VariableAlreadyDefinedInScope { line: name.line });
             } else {
                 scope.insert(name.lexeme.to_owned(), false);
             }
@@ -152,9 +152,9 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
             Stmt::Print { expression } => {
                 self.resolve_expr(expression)?;
             }
-            Stmt::Return { value } => {
+            Stmt::Return { keyword, value } => {
                 if *self.current_function_type.borrow() == FunctionType::None {
-                    return Err(RuntimeError::TopLevelReturn);
+                    return Err(RuntimeError::TopLevelReturn { line: keyword.line });
                 }
 
                 if let Some(expr) = value.as_ref() {
@@ -190,6 +190,7 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
             }
             Expr::Call {
                 uuid: _uuid,
+                paren: _parent,
                 callee,
                 arguments,
             } => {
@@ -225,7 +226,7 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
                 if let Some(scope) = self.scopes.borrow().last() {
                     if let Some(definition) = scope.get(&name.lexeme) {
                         if !definition {
-                            return Err(RuntimeError::VariableNotDefined);
+                            return Err(RuntimeError::VariableNotDefined { line: name.line });
                         }
                     }
                 }

@@ -21,15 +21,25 @@ impl LoxEnvironment<'_> {
 
     fn run(&self, input: String) -> Result<(), Box<dyn std::error::Error>> {
         let mut scanner = Scanner::new(input);
-        let tokens = scanner.scan_tokens()?;
+        let tokens = scanner
+            .scan_tokens()
+            .map_err(|error| eprintln!("{}", error))
+            .unwrap_or_default();
 
         let parser = Parser::new(tokens);
-        let statements = parser.parse()?;
+        let statements = parser
+            .parse()
+            .map_err(|error| eprintln!("{}", error))
+            .unwrap_or_default();
 
         let resolver = Resolver::new(Rc::clone(&self.interpreter));
-        resolver.resolve_stmts(&statements)?;
+        if let Err(error) = resolver.resolve_stmts(&statements) {
+            eprintln!("{}", error)
+        };
 
-        self.interpreter.interpret(&statements)?;
+        if let Err(error) = self.interpreter.interpret(&statements) {
+            eprintln!("{}", error)
+        }
 
         Ok(())
     }

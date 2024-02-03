@@ -54,7 +54,7 @@ pub enum TokenType {
 pub struct Token {
     pub(crate) token_type: TokenType,
     pub(crate) lexeme: String,
-    line: usize,
+    pub(crate) line: usize,
 }
 
 impl Token {
@@ -69,12 +69,12 @@ impl Token {
 
 #[derive(Error, Debug)]
 pub enum ScannerError {
-    #[error("Unknown symbol {symbol:?} detected in line {line:?}!")]
-    UnknownSymbol { symbol: char, line: usize },
-    #[error("Unterminated string in line {line:?}!")]
+    #[error("{line:?}: Unknown symbol {symbol:?} detected!")]
+    UnknownSymbol { line: usize, symbol: char },
+    #[error("{line:?}: Unterminated string!")]
     UnterminatedString { line: usize },
-    #[error("Error while parsing number {number_string:?} in line {line:?}!")]
-    NumberParsingError { number_string: String, line: usize },
+    #[error("{line:?}: Error while parsing number {number_string:?}!")]
+    NumberParsingError { line: usize, number_string: String },
 }
 
 pub struct Scanner {
@@ -182,8 +182,8 @@ impl Scanner {
                     self.match_identifier()
                 } else {
                     Err(ScannerError::UnknownSymbol {
-                        symbol: c,
                         line: self.current_line,
+                        symbol: c,
                     })
                 }
             }
@@ -279,8 +279,8 @@ impl Scanner {
             .collect();
         let number = f64::from_str(number_string.as_str()).map_err(|_| {
             ScannerError::NumberParsingError {
-                number_string,
                 line: self.current_line,
+                number_string,
             }
         })?;
 

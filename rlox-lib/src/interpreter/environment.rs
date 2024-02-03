@@ -1,4 +1,5 @@
 use crate::base::expr_result::ExprResult;
+use crate::base::scanner::Token;
 use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -29,8 +30,8 @@ impl Environment {
         self.values.insert(name.to_string(), value);
     }
 
-    pub fn get(&self, name: &str) -> Result<ExprResult, RuntimeError> {
-        if let Some(value) = self.values.get(name) {
+    pub fn get(&self, name: &Token) -> Result<ExprResult, RuntimeError> {
+        if let Some(value) = self.values.get(&name.lexeme) {
             return Ok(value.to_owned());
         }
 
@@ -39,11 +40,12 @@ impl Environment {
         }
 
         Err(RuntimeError::UndefinedVariable {
-            name: name.to_string(),
+            line: name.line,
+            name: name.lexeme.to_owned(),
         })
     }
 
-    pub fn get_at(&self, distance: usize, name: &str) -> Result<ExprResult, RuntimeError> {
+    pub fn get_at(&self, distance: usize, name: &Token) -> Result<ExprResult, RuntimeError> {
         self.get_at_helper(distance, 0, name)
     }
 
@@ -51,24 +53,25 @@ impl Environment {
         &self,
         distance: usize,
         index: usize,
-        name: &str,
+        name: &Token,
     ) -> Result<ExprResult, RuntimeError> {
         if index < distance {
             if let Some(enclosing) = &self.enclosing {
                 return enclosing.borrow().get_at_helper(distance, index + 1, name);
             }
-        } else if let Some(value) = self.values.get(name) {
+        } else if let Some(value) = self.values.get(&name.lexeme) {
             return Ok(value.to_owned());
         }
 
         Err(RuntimeError::UndefinedVariable {
-            name: name.to_string(),
+            line: name.line,
+            name: name.lexeme.to_owned(),
         })
     }
 
-    pub fn assign(&mut self, name: &str, value: &ExprResult) -> Result<(), RuntimeError> {
-        if self.values.contains_key(name) {
-            self.values.insert(name.to_string(), value.to_owned());
+    pub fn assign(&mut self, name: &Token, value: &ExprResult) -> Result<(), RuntimeError> {
+        if self.values.contains_key(&name.lexeme) {
+            self.values.insert(name.lexeme.to_owned(), value.to_owned());
 
             return Ok(());
         }
@@ -78,14 +81,15 @@ impl Environment {
         }
 
         Err(RuntimeError::UndefinedVariable {
-            name: name.to_string(),
+            line: name.line,
+            name: name.lexeme.to_owned(),
         })
     }
 
     pub fn assign_at(
         &mut self,
         distance: usize,
-        name: &str,
+        name: &Token,
         value: &ExprResult,
     ) -> Result<(), RuntimeError> {
         self.assign_at_helper(distance, 0, name, value)
@@ -95,7 +99,7 @@ impl Environment {
         &mut self,
         distance: usize,
         index: usize,
-        name: &str,
+        name: &Token,
         value: &ExprResult,
     ) -> Result<(), RuntimeError> {
         if index < distance {
@@ -104,14 +108,15 @@ impl Environment {
                     .borrow_mut()
                     .assign_at_helper(distance, index + 1, name, value);
             }
-        } else if self.values.contains_key(name) {
-            self.values.insert(name.to_string(), value.to_owned());
+        } else if self.values.contains_key(&name.lexeme) {
+            self.values.insert(name.lexeme.to_owned(), value.to_owned());
 
             return Ok(());
         }
 
         Err(RuntimeError::UndefinedVariable {
-            name: name.to_string(),
+            line: name.line,
+            name: name.lexeme.to_owned(),
         })
     }
 }

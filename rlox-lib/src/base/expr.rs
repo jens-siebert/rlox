@@ -25,6 +25,7 @@ pub enum Expr {
     },
     Call {
         uuid: Uuid,
+        paren: Box<Token>,
         callee: Box<Expr>,
         arguments: Vec<Expr>,
     },
@@ -68,9 +69,10 @@ impl Expr {
         }
     }
 
-    pub fn call(callee: Expr, arguments: Vec<Expr>) -> Self {
+    pub fn call(paren: Token, callee: Expr, arguments: Vec<Expr>) -> Self {
         Expr::Call {
             uuid: Uuid::new_v4(),
+            paren: Box::new(paren),
             callee: Box::new(callee),
             arguments,
         }
@@ -138,6 +140,7 @@ impl ExprUuid for Expr {
             } => uuid,
             Expr::Call {
                 uuid,
+                paren: _paren,
                 callee: _callee,
                 arguments: _arguments,
             } => uuid,

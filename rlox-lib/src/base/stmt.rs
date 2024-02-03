@@ -24,6 +24,7 @@ pub enum Stmt {
         expression: Box<Expr>,
     },
     Return {
+        keyword: Box<Token>,
         value: Box<Option<Expr>>,
     },
     Var {
@@ -69,8 +70,9 @@ impl Stmt {
         }
     }
 
-    pub fn return_stmt(value: Option<Expr>) -> Self {
+    pub fn return_stmt(keyword: Token, value: Option<Expr>) -> Self {
         Stmt::Return {
+            keyword: Box::new(keyword),
             value: Box::new(value),
         }
     }

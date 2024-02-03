@@ -112,7 +112,7 @@ impl Callable for Function {
             if let Some(argument) = arguments.get(i) {
                 scoped_interpreter.define(token.lexeme.as_str(), argument.clone());
             } else {
-                return Err(RuntimeError::InvalidArgument);
+                return Err(RuntimeError::InvalidArgument { line: token.line });
             }
         }
 

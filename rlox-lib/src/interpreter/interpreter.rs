@@ -83,11 +83,9 @@ impl<'a> Interpreter<'a> {
 
     fn lookup_variable(&self, name: &Token, uuid: &Uuid) -> Result<ExprResult, RuntimeError> {
         if let Some(distance) = self.locals.borrow().get(uuid) {
-            self.environment
-                .borrow()
-                .get_at(distance.to_owned(), name.lexeme.as_str())
+            self.environment.borrow().get_at(distance.to_owned(), name)
         } else {
-            self.globals.borrow().get(name.lexeme.as_str())
+            self.globals.borrow().get(name)
         }
     }
 }
@@ -115,25 +113,33 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::boolean(v1 > v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::GreaterEqual => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::boolean(v1 >= v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::Less => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::boolean(v1 < v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::LessEqual => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::boolean(v1 <= v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::BangEqual => Ok(ExprResult::boolean(left != right)),
                     TokenType::EqualEqual => Ok(ExprResult::boolean(left == right)),
@@ -141,19 +147,25 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::number(v1 - v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::Slash => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::number(v1 / v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::Star => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
                             Ok(ExprResult::number(v1 * v2))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::Plus => match (left, right) {
                         (ExprResult::Number(v1), ExprResult::Number(v2)) => {
@@ -162,13 +174,18 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                         (ExprResult::String(v1), ExprResult::String(v2)) => {
                             Ok(ExprResult::string(v1.clone() + v2.clone().as_str()))
                         }
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
-                    _ => Err(RuntimeError::InvalidValue),
+                    _ => Err(RuntimeError::InvalidValue {
+                        line: operator.line,
+                    }),
                 }
             }
             Expr::Call {
                 uuid: _uuid,
+                paren,
                 callee,
                 arguments,
             } => {
@@ -176,7 +193,9 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
 
                 if let ExprResult::Callable(callable) = call {
                     if arguments.len() != callable.arity() {
-                        return Err(RuntimeError::NonMatchingNumberOfArguments);
+                        return Err(RuntimeError::NonMatchingNumberOfArguments {
+                            line: paren.line,
+                        });
                     }
 
                     let mut args = vec![];
@@ -186,7 +205,7 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
 
                     callable.call(self, &args)
                 } else {
-                    Err(RuntimeError::UndefinedCallable)
+                    Err(RuntimeError::UndefinedCallable { line: paren.line })
                 }
             }
             Expr::Grouping {
@@ -227,10 +246,14 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                 match &operator.token_type {
                     TokenType::Minus => match right {
                         ExprResult::Number(value) => Ok(ExprResult::number(-value)),
-                        _ => Err(RuntimeError::NumberExpected),
+                        _ => Err(RuntimeError::NumberExpected {
+                            line: operator.line,
+                        }),
                     },
                     TokenType::Bang => Ok(ExprResult::boolean(!right.is_truthy())),
-                    _ => Err(RuntimeError::InvalidValue),
+                    _ => Err(RuntimeError::InvalidValue {
+                        line: operator.line,
+                    }),
                 }
             }
             Expr::Variable { uuid, name } => self.lookup_variable(name, uuid),
@@ -238,13 +261,11 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                 let v = self.evaluate(value)?;
 
                 if let Some(distance) = self.locals.borrow().get(uuid) {
-                    self.environment.borrow_mut().assign_at(
-                        distance.to_owned(),
-                        name.lexeme.as_str(),
-                        &v,
-                    )?;
+                    self.environment
+                        .borrow_mut()
+                        .assign_at(distance.to_owned(), name, &v)?;
                 } else {
-                    self.globals.borrow_mut().assign(name.lexeme.as_str(), &v)?;
+                    self.globals.borrow_mut().assign(name, &v)?;
                 }
 
                 Ok(v)
@@ -295,7 +316,10 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                 writeln!(stream, "{}", value).map_err(|_| RuntimeError::OutputError)?;
                 stream.flush().map_err(|_| RuntimeError::OutputError)?;
             }
-            Stmt::Return { value } => {
+            Stmt::Return {
+                keyword: _keyword,
+                value,
+            } => {
                 if let Some(expr) = *value.to_owned() {
                     let ret_val = self.evaluate(&expr)?;
                     return Err(RuntimeError::Return { ret_val });
