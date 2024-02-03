@@ -1,5 +1,5 @@
 use crate::base::expr_result::ExprResult;
-use crate::base::visitor::RuntimeError;
+use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

@@ -1,8 +1,8 @@
 use crate::base::scanner::Token;
 use crate::base::stmt::Stmt;
-use crate::base::visitor::RuntimeError;
 use crate::interpreter::environment::Environment;
 use crate::interpreter::interpreter::Interpreter;
+use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::rc::Rc;

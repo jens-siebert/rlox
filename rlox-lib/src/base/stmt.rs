@@ -1,6 +1,6 @@
 use crate::base::expr::Expr;
 use crate::base::scanner::Token;
-use crate::base::visitor::{RuntimeError, Visitor};
+use crate::base::visitor::Visitor;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
@@ -89,7 +89,7 @@ impl Stmt {
         }
     }
 
-    pub fn accept<R>(&self, visitor: &dyn Visitor<Stmt, R>) -> Result<R, RuntimeError> {
+    pub fn accept<R, E>(&self, visitor: &dyn Visitor<Stmt, R, E>) -> Result<R, E> {
         visitor.visit(self)
     }
 }

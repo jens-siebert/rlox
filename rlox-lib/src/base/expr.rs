@@ -1,5 +1,5 @@
 use crate::base::scanner::Token;
-use crate::base::visitor::{RuntimeError, Visitor};
+use crate::base::visitor::Visitor;
 use ordered_float::OrderedFloat;
 use uuid::Uuid;
 
@@ -122,7 +122,7 @@ impl Expr {
         }
     }
 
-    pub fn accept<R>(&self, visitor: &dyn Visitor<Expr, R>) -> Result<R, RuntimeError> {
+    pub fn accept<R, E>(&self, visitor: &dyn Visitor<Expr, R, E>) -> Result<R, E> {
         visitor.visit(self)
     }
 }

@@ -3,8 +3,9 @@ use crate::base::expr_result::ExprResult;
 use crate::base::expr_result::{Callable, Function};
 use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::Stmt;
-use crate::base::visitor::{RuntimeError, Visitor};
+use crate::base::visitor::Visitor;
 use crate::interpreter::environment::Environment;
+use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::stdout;
@@ -97,7 +98,7 @@ impl Default for Interpreter<'_> {
     }
 }
 
-impl Visitor<Expr, ExprResult> for Interpreter<'_> {
+impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
     fn visit(&self, input: &Expr) -> Result<ExprResult, RuntimeError> {
         match input {
             Expr::Binary {
@@ -252,7 +253,7 @@ impl Visitor<Expr, ExprResult> for Interpreter<'_> {
     }
 }
 
-impl Visitor<Stmt, ()> for Interpreter<'_> {
+impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {

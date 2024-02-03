@@ -1,8 +1,9 @@
 use crate::base::expr::{Expr, ExprUuid};
 use crate::base::scanner::Token;
 use crate::base::stmt::Stmt;
-use crate::base::visitor::{RuntimeError, Visitor};
+use crate::base::visitor::Visitor;
 use crate::interpreter::interpreter::Interpreter;
+use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -117,7 +118,7 @@ impl<'a> Resolver<'a> {
     }
 }
 
-impl Visitor<Stmt, ()> for Resolver<'_> {
+impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
     fn visit(&self, input: &Stmt) -> Result<(), RuntimeError> {
         match input {
             Stmt::Block { statements } => {
@@ -175,7 +176,7 @@ impl Visitor<Stmt, ()> for Resolver<'_> {
     }
 }
 
-impl Visitor<Expr, ()> for Resolver<'_> {
+impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
     fn visit(&self, input: &Expr) -> Result<(), RuntimeError> {
         match input {
             Expr::Binary {
