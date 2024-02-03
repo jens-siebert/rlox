@@ -8,13 +8,13 @@ use std::fs;
 use std::io::{stdout, Write};
 use std::rc::Rc;
 
-struct LoxEnvironment<'a> {
+struct LoxRuntime<'a> {
     interpreter: Rc<Interpreter<'a>>,
 }
 
-impl LoxEnvironment<'_> {
+impl LoxRuntime<'_> {
     fn new() -> Self {
-        LoxEnvironment {
+        LoxRuntime {
             interpreter: Rc::new(Interpreter::new(Rc::new(RefCell::new(stdout())))),
         }
     }
@@ -75,7 +75,7 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let environment = LoxEnvironment::new();
+    let environment = LoxRuntime::new();
 
     match args.script {
         Some(script_file) => environment.run_file(script_file),
