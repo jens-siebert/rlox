@@ -26,8 +26,8 @@ impl Environment {
         }))
     }
 
-    pub fn define(&mut self, name: &str, value: ExprResult) {
-        self.values.insert(name.to_string(), value);
+    pub fn define(&mut self, name: &Token, value: ExprResult) {
+        self.values.insert(name.lexeme.to_owned(), value);
     }
 
     pub fn get(&self, name: &Token) -> Result<ExprResult, RuntimeError> {

@@ -14,6 +14,7 @@ pub enum ExprResult {
     String(String),
     Boolean(bool),
     Function(LoxFunction),
+    Class(LoxClass),
     #[default]
     None,
 }
@@ -31,8 +32,12 @@ impl ExprResult {
         ExprResult::Boolean(value)
     }
 
-    pub fn function(value: LoxFunction) -> Self {
-        ExprResult::Function(value)
+    pub fn function(function: LoxFunction) -> Self {
+        ExprResult::Function(function)
+    }
+
+    pub fn class(class: LoxClass) -> Self {
+        ExprResult::Class(class)
     }
 
     pub fn none() -> Self {
@@ -54,7 +59,8 @@ impl Display for ExprResult {
             ExprResult::Number(value) => value.to_string(),
             ExprResult::String(value) => value.to_string(),
             ExprResult::Boolean(value) => value.to_string(),
-            ExprResult::Function(callable) => format!("<fn {}>", callable.name.lexeme),
+            ExprResult::Function(function) => format!("<fn {}>", function.name.lexeme),
+            ExprResult::Class(class) => class.name.lexeme.to_string(),
             ExprResult::None => String::from("nil"),
         };
 
@@ -110,12 +116,23 @@ impl Callable for LoxFunction {
 
         for (i, token) in self.params.iter().enumerate() {
             if let Some(argument) = arguments.get(i) {
-                scoped_interpreter.define(token.lexeme.as_str(), argument.clone());
+                scoped_interpreter.define(token, argument.clone());
             } else {
                 return Err(RuntimeError::InvalidArgument { line: token.line });
             }
         }
 
         scoped_interpreter.execute_block(&self.body)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LoxClass {
+    name: Token,
+}
+
+impl LoxClass {
+    pub fn new(name: Token) -> Self {
+        Self { name }
     }
 }

@@ -126,6 +126,13 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 self.resolve_stmts(statements)?;
                 self.end_scope()
             }
+            Stmt::Class {
+                name,
+                methods: _methods,
+            } => {
+                self.declare(name)?;
+                self.define(name);
+            }
             Stmt::Expression { expression } => {
                 self.resolve_expr(expression)?;
             }

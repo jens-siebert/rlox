@@ -20,6 +20,8 @@ pub enum ParserError {
     MissingLeftParenthesisAfterForStatement { line: usize },
     #[error("{line:?}: Expect '{{' before function body.")]
     MissingLeftBraceBeforeFunctionBody { line: usize },
+    #[error("{line:?}: Expect '{{' before class body.")]
+    MissingLeftBraceBeforeClassBody { line: usize },
     #[error("{line:?}: Expect ')' after expression.")]
     MissingRightParenthesisAfterExpression { line: usize },
     #[error("{line:?}: Expect ')' after condition.")]
@@ -32,6 +34,8 @@ pub enum ParserError {
     MissingRightParenthesisAfterArguments { line: usize },
     #[error("{line:?}: Expect '}}' after block.")]
     MissingRightBraceAfterBlock { line: usize },
+    #[error("{line:?}: Expect '}}' after class body.")]
+    MissingRightBraceAfterClassBody { line: usize },
     #[error("{line:?}: Expect ';' after value.")]
     MissingSemicolonAfterValue { line: usize },
     #[error("{line:?}: Expect ';' after expression.")]
@@ -44,6 +48,8 @@ pub enum ParserError {
     MissingVariableName { line: usize },
     #[error("{line:?}: Expect function name.")]
     MissingFunctionName { line: usize },
+    #[error("{line:?}: Expect class name.")]
+    MissingClassName { line: usize },
     #[error("{line:?}: Expect function name.")]
     MissingParameterName { line: usize },
     #[error("{line:?}: Invalid assignment target.")]
@@ -73,13 +79,45 @@ impl Parser {
     }
 
     fn declaration(&self) -> Result<Stmt, ParserError> {
-        if self.match_token_types(&[TokenType::Fun])? {
+        if self.match_token_types(&[TokenType::Class])? {
+            self.class_declaration()
+        } else if self.match_token_types(&[TokenType::Fun])? {
             self.function()
         } else if self.match_token_types(&[TokenType::Var])? {
             self.variable_declaration()
         } else {
             self.statement()
         }
+    }
+
+    fn class_declaration(&self) -> Result<Stmt, ParserError> {
+        let name = self.consume(
+            TokenType::Identifier,
+            ParserError::MissingClassName {
+                line: self.peek().unwrap().line,
+            },
+        )?;
+
+        self.consume(
+            TokenType::LeftBrace,
+            ParserError::MissingLeftBraceBeforeClassBody {
+                line: self.peek().unwrap().line,
+            },
+        )?;
+
+        let mut methods = vec![];
+        while !self.check(TokenType::RightBrace)? && !self.is_at_end()? {
+            methods.push(self.function()?);
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            ParserError::MissingRightBraceAfterClassBody {
+                line: self.peek().unwrap().line,
+            },
+        )?;
+
+        Ok(Stmt::class(name, methods))
     }
 
     fn function(&self) -> Result<Stmt, ParserError> {

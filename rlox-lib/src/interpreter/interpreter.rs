@@ -1,6 +1,6 @@
 use crate::base::expr::{Expr, LiteralValue};
-use crate::base::expr_result::ExprResult;
 use crate::base::expr_result::{Callable, LoxFunction};
+use crate::base::expr_result::{ExprResult, LoxClass};
 use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::Stmt;
 use crate::base::visitor::Visitor;
@@ -65,7 +65,7 @@ impl<'a> Interpreter<'a> {
         Ok(ExprResult::none())
     }
 
-    pub fn define(&self, name: &str, value: ExprResult) {
+    pub fn define(&self, name: &Token, value: ExprResult) {
         self.environment.borrow_mut().define(name, value);
     }
 
@@ -282,11 +282,29 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     self.fork(Environment::new_enclosing(Rc::clone(&self.environment)));
                 scoped_interpreter.execute_block(statements)?;
             }
+            Stmt::Class {
+                name,
+                methods: _methods,
+            } => {
+                self.environment
+                    .borrow_mut()
+                    .define(name, ExprResult::none());
+
+                let class = LoxClass::new(*name.to_owned());
+
+                self.environment
+                    .borrow_mut()
+                    .assign(name, &ExprResult::class(class))?;
+            }
             Stmt::Expression { expression } => {
                 self.evaluate(expression)?;
             }
             Stmt::Function { name, params, body } => {
-                let callable = LoxFunction::new(
+                self.environment
+                    .borrow_mut()
+                    .define(name, ExprResult::none());
+
+                let function = LoxFunction::new(
                     *name.to_owned(),
                     params.to_owned(),
                     body.to_owned(),
@@ -295,7 +313,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
 
                 self.environment
                     .borrow_mut()
-                    .define(name.lexeme.as_str(), ExprResult::function(callable.clone()));
+                    .assign(name, &ExprResult::function(function.clone()))?;
             }
             Stmt::If {
                 condition,
@@ -327,7 +345,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
-                self.environment.borrow_mut().define(&name.lexeme, value);
+                self.environment.borrow_mut().define(name, value);
             }
             Stmt::While { condition, body } => {
                 while self.evaluate(condition)?.is_truthy() {

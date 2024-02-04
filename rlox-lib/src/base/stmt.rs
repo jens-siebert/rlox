@@ -7,6 +7,10 @@ pub enum Stmt {
     Block {
         statements: Vec<Stmt>,
     },
+    Class {
+        name: Box<Token>,
+        methods: Vec<Stmt>,
+    },
     Expression {
         expression: Box<Expr>,
     },
@@ -40,6 +44,13 @@ pub enum Stmt {
 impl Stmt {
     pub fn block(statements: Vec<Stmt>) -> Self {
         Stmt::Block { statements }
+    }
+
+    pub fn class(name: Token, methods: Vec<Stmt>) -> Self {
+        Stmt::Class {
+            name: Box::new(name),
+            methods,
+        }
     }
 
     pub fn function(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
