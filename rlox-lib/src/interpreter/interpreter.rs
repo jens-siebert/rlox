@@ -99,6 +99,19 @@ impl Default for Interpreter<'_> {
 impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
     fn visit(&self, input: &Expr) -> Result<ExprResult, RuntimeError> {
         match input {
+            Expr::Assign { uuid, name, value } => {
+                let v = self.evaluate(value)?;
+
+                if let Some(distance) = self.locals.borrow().get(uuid) {
+                    self.environment
+                        .borrow_mut()
+                        .assign_at(distance.to_owned(), name, &v)?;
+                } else {
+                    self.globals.borrow_mut().assign(name, &v)?;
+                }
+
+                Ok(v)
+            }
             Expr::Binary {
                 uuid: _uuid,
                 left,
@@ -210,6 +223,18 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                     Err(RuntimeError::UndefinedCallable { line: paren.line })
                 }
             }
+            Expr::Get {
+                uuid: _uuid,
+                object,
+                name,
+            } => {
+                let obj = self.evaluate(object)?;
+                if let ExprResult::Instance(instance) = obj {
+                    instance.get(name)
+                } else {
+                    Err(RuntimeError::InvalidPropertyAccess { line: name.line })
+                }
+            }
             Expr::Grouping {
                 uuid: _uuid,
                 expression,
@@ -238,6 +263,22 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
 
                 self.evaluate(right)
             }
+            Expr::Set {
+                uuid: _uuid,
+                object,
+                name,
+                value,
+            } => {
+                let obj = self.evaluate(object)?;
+                if let ExprResult::Instance(instance) = obj {
+                    let v = self.evaluate(value)?;
+                    instance.set(name, v.to_owned());
+
+                    Ok(v)
+                } else {
+                    Err(RuntimeError::InvalidFieldAccess { line: name.line })
+                }
+            }
             Expr::Unary {
                 uuid: _uuid,
                 operator,
@@ -259,19 +300,6 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                 }
             }
             Expr::Variable { uuid, name } => self.lookup_variable(name, uuid),
-            Expr::Assign { uuid, name, value } => {
-                let v = self.evaluate(value)?;
-
-                if let Some(distance) = self.locals.borrow().get(uuid) {
-                    self.environment
-                        .borrow_mut()
-                        .assign_at(distance.to_owned(), name, &v)?;
-                } else {
-                    self.globals.borrow_mut().assign(name, &v)?;
-                }
-
-                Ok(v)
-            }
         }
     }
 }

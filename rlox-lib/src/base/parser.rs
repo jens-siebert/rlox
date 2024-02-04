@@ -52,6 +52,8 @@ pub enum ParserError {
     MissingClassName { line: usize },
     #[error("{line:?}: Expect function name.")]
     MissingParameterName { line: usize },
+    #[error("{line:?}: Expect property name after '.'.")]
+    MissingPropertyName { line: usize },
     #[error("{line:?}: Invalid assignment target.")]
     InvalidAssignmentTarget { line: usize },
 }
@@ -386,6 +388,11 @@ impl Parser {
 
             return match expr {
                 Expr::Variable { uuid: _uuid, name } => Ok(Expr::assign(*name, value)),
+                Expr::Get {
+                    uuid: _name,
+                    object,
+                    name,
+                } => Ok(Expr::set(*object, *name, value)),
                 _ => Err(ParserError::InvalidAssignmentTarget {
                     line: self.peek().unwrap().line,
                 }),
@@ -506,6 +513,15 @@ impl Parser {
                 )?;
 
                 expr = Expr::call(paren, expr, arguments);
+            } else if self.match_token_types(&[TokenType::Dot])? {
+                let name = self.consume(
+                    TokenType::Identifier,
+                    ParserError::MissingPropertyName {
+                        line: self.peek().unwrap().line,
+                    },
+                )?;
+
+                expr = Expr::get(expr, name)
             } else {
                 break;
             }

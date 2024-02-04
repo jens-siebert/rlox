@@ -186,6 +186,14 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
 impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
     fn visit(&self, input: &Expr) -> Result<(), RuntimeError> {
         match input {
+            Expr::Assign {
+                uuid: _uuid,
+                name,
+                value,
+            } => {
+                self.resolve_expr(value)?;
+                self.resolve_local(input, name)?;
+            }
             Expr::Binary {
                 uuid: _uuid,
                 left,
@@ -206,6 +214,13 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
                     self.resolve_expr(argument)?;
                 }
             }
+            Expr::Get {
+                uuid: _uuid,
+                object,
+                name: _name,
+            } => {
+                self.resolve_expr(object)?;
+            }
             Expr::Grouping {
                 uuid: _uuid,
                 expression,
@@ -221,6 +236,15 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
             } => {
                 self.resolve_expr(left)?;
                 self.resolve_expr(right)?;
+            }
+            Expr::Set {
+                uuid: _uuid,
+                object,
+                name: _name,
+                value,
+            } => {
+                self.resolve_expr(value)?;
+                self.resolve_expr(object)?;
             }
             Expr::Unary {
                 uuid: _uuid,
@@ -238,14 +262,6 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
                     }
                 }
 
-                self.resolve_local(input, name)?;
-            }
-            Expr::Assign {
-                uuid: _uuid,
-                name,
-                value,
-            } => {
-                self.resolve_expr(value)?;
                 self.resolve_local(input, name)?;
             }
         }

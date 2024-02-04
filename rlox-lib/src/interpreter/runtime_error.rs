@@ -27,6 +27,12 @@ pub enum RuntimeError {
     VariableAlreadyDefinedInScope { line: usize },
     #[error("{line:?}: Can't return from top-level code!")]
     TopLevelReturn { line: usize },
+    #[error("{line:?}: Undefined property!")]
+    UndefinedProperty { line: usize },
+    #[error("{line:?}: Only instances have properties!")]
+    InvalidPropertyAccess { line: usize },
+    #[error("{line:?}: Only instances have fields!")]
+    InvalidFieldAccess { line: usize },
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

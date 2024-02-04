@@ -17,6 +17,11 @@ pub enum LiteralValue {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
+    Assign {
+        uuid: Uuid,
+        name: Box<Token>,
+        value: Box<Expr>,
+    },
     Binary {
         uuid: Uuid,
         left: Box<Expr>,
@@ -28,6 +33,11 @@ pub enum Expr {
         paren: Box<Token>,
         callee: Box<Expr>,
         arguments: Vec<Expr>,
+    },
+    Get {
+        uuid: Uuid,
+        object: Box<Expr>,
+        name: Box<Token>,
     },
     Grouping {
         uuid: Uuid,
@@ -43,6 +53,12 @@ pub enum Expr {
         operator: Box<Token>,
         right: Box<Expr>,
     },
+    Set {
+        uuid: Uuid,
+        object: Box<Expr>,
+        name: Box<Token>,
+        value: Box<Expr>,
+    },
     Unary {
         uuid: Uuid,
         operator: Box<Token>,
@@ -52,14 +68,17 @@ pub enum Expr {
         uuid: Uuid,
         name: Box<Token>,
     },
-    Assign {
-        uuid: Uuid,
-        name: Box<Token>,
-        value: Box<Expr>,
-    },
 }
 
 impl Expr {
+    pub fn assign(name: Token, value: Expr) -> Self {
+        Expr::Assign {
+            uuid: Uuid::new_v4(),
+            name: Box::new(name),
+            value: Box::new(value),
+        }
+    }
+
     pub fn binary(left: Expr, operator: Token, right: Expr) -> Self {
         Expr::Binary {
             uuid: Uuid::new_v4(),
@@ -75,6 +94,14 @@ impl Expr {
             paren: Box::new(paren),
             callee: Box::new(callee),
             arguments,
+        }
+    }
+
+    pub fn get(object: Expr, name: Token) -> Self {
+        Expr::Get {
+            uuid: Uuid::new_v4(),
+            object: Box::new(object),
+            name: Box::new(name),
         }
     }
 
@@ -101,6 +128,15 @@ impl Expr {
         }
     }
 
+    pub fn set(object: Expr, name: Token, value: Expr) -> Self {
+        Expr::Set {
+            uuid: Uuid::new_v4(),
+            object: Box::new(object),
+            name: Box::new(name),
+            value: Box::new(value),
+        }
+    }
+
     pub fn unary(operator: Token, right: Expr) -> Self {
         Expr::Unary {
             uuid: Uuid::new_v4(),
@@ -116,14 +152,6 @@ impl Expr {
         }
     }
 
-    pub fn assign(name: Token, value: Expr) -> Self {
-        Expr::Assign {
-            uuid: Uuid::new_v4(),
-            name: Box::new(name),
-            value: Box::new(value),
-        }
-    }
-
     pub fn accept<R, E>(&self, visitor: &dyn Visitor<Expr, R, E>) -> Result<R, E> {
         visitor.visit(self)
     }
@@ -132,6 +160,11 @@ impl Expr {
 impl ExprUuid for Expr {
     fn uuid(&self) -> Uuid {
         *match &self {
+            Expr::Assign {
+                uuid,
+                name: _name,
+                value: _value,
+            } => uuid,
             Expr::Binary {
                 uuid,
                 left: _left,
@@ -143,6 +176,11 @@ impl ExprUuid for Expr {
                 paren: _paren,
                 callee: _callee,
                 arguments: _arguments,
+            } => uuid,
+            Expr::Get {
+                uuid,
+                object: _object,
+                name: _name,
             } => uuid,
             Expr::Grouping {
                 uuid,
@@ -158,17 +196,18 @@ impl ExprUuid for Expr {
                 operator: _operator,
                 right: _right,
             } => uuid,
+            Expr::Set {
+                uuid,
+                object: _object,
+                name: _name,
+                value: _value,
+            } => uuid,
             Expr::Unary {
                 uuid,
                 operator: _operator,
                 right: _right,
             } => uuid,
             Expr::Variable { uuid, name: _name } => uuid,
-            Expr::Assign {
-                uuid,
-                name: _name,
-                value: _value,
-            } => uuid,
         }
     }
 }

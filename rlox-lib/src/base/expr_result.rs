@@ -4,6 +4,7 @@ use crate::interpreter::environment::Environment;
 use crate::interpreter::interpreter::Interpreter;
 use crate::interpreter::runtime_error::RuntimeError;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
 use thiserror::Error;
@@ -15,7 +16,7 @@ pub enum ExprResult {
     Boolean(bool),
     Function(LoxFunction),
     Class(LoxClass),
-    Instance(LoxInstance),
+    Instance(Rc<LoxInstance>),
     #[default]
     None,
 }
@@ -42,7 +43,7 @@ impl ExprResult {
     }
 
     pub fn instance(instance: LoxInstance) -> Self {
-        ExprResult::Instance(instance)
+        ExprResult::Instance(Rc::new(instance))
     }
 
     pub fn none() -> Self {
@@ -160,10 +161,28 @@ impl Callable for LoxClass {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoxInstance {
     class: LoxClass,
+    fields: RefCell<HashMap<String, ExprResult>>,
 }
 
 impl LoxInstance {
     pub fn new(class: LoxClass) -> Self {
-        Self { class }
+        Self {
+            class,
+            fields: RefCell::new(HashMap::new()),
+        }
+    }
+
+    pub fn get(&self, name: &Token) -> Result<ExprResult, RuntimeError> {
+        if let Some(value) = self.fields.borrow().get(&name.lexeme) {
+            Ok(value.to_owned())
+        } else {
+            Err(RuntimeError::UndefinedProperty { line: name.line })
+        }
+    }
+
+    pub fn set(&self, name: &Token, value: ExprResult) {
+        self.fields
+            .borrow_mut()
+            .insert(name.lexeme.to_owned(), value);
     }
 }
