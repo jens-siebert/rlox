@@ -12,6 +12,7 @@ use std::rc::Rc;
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'a> {
@@ -126,12 +127,13 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 self.resolve_stmts(statements)?;
                 self.end_scope()
             }
-            Stmt::Class {
-                name,
-                methods: _methods,
-            } => {
+            Stmt::Class { name, methods } => {
                 self.declare(name)?;
                 self.define(name);
+
+                for method in methods {
+                    self.resolve_function(method, FunctionType::Method)?;
+                }
             }
             Stmt::Expression { expression } => {
                 self.resolve_expr(expression)?;

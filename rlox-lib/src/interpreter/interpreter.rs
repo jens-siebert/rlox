@@ -312,15 +312,26 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     self.fork(Environment::new_enclosing(Rc::clone(&self.environment)));
                 scoped_interpreter.execute_block(statements)?;
             }
-            Stmt::Class {
-                name,
-                methods: _methods,
-            } => {
+            Stmt::Class { name, methods } => {
                 self.environment
                     .borrow_mut()
                     .define(name, ExprResult::none());
 
-                let class = LoxClass::new(*name.to_owned());
+                let mut functions = HashMap::new();
+                for method in methods {
+                    if let Stmt::Function { name, params, body } = method {
+                        let function = LoxFunction::new(
+                            *name.to_owned(),
+                            params.to_owned(),
+                            body.to_owned(),
+                            Rc::clone(&self.environment),
+                        );
+
+                        functions.insert(name.lexeme.to_owned(), function);
+                    }
+                }
+
+                let class = LoxClass::new(*name.to_owned(), functions);
 
                 self.environment
                     .borrow_mut()

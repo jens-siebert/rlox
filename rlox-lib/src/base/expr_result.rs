@@ -136,11 +136,16 @@ impl Callable for LoxFunction {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoxClass {
     name: Token,
+    methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: Token) -> Self {
-        Self { name }
+    pub fn new(name: Token, methods: HashMap<String, LoxFunction>) -> Self {
+        Self { name, methods }
+    }
+
+    pub fn find_method(&self, name: &Token) -> Option<&LoxFunction> {
+        self.methods.get(&name.lexeme)
     }
 }
 
@@ -175,6 +180,8 @@ impl LoxInstance {
     pub fn get(&self, name: &Token) -> Result<ExprResult, RuntimeError> {
         if let Some(value) = self.fields.borrow().get(&name.lexeme) {
             Ok(value.to_owned())
+        } else if let Some(method) = self.class.find_method(name) {
+            Ok(ExprResult::function(method.to_owned()))
         } else {
             Err(RuntimeError::UndefinedProperty { line: name.line })
         }
