@@ -191,8 +191,8 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
             } => {
                 let call = self.evaluate(callee)?;
 
-                if let ExprResult::Function(callable) = call {
-                    if arguments.len() != callable.arity() {
+                if let ExprResult::Function(function) = call {
+                    if arguments.len() != function.arity() {
                         return Err(RuntimeError::NonMatchingNumberOfArguments {
                             line: paren.line,
                         });
@@ -203,7 +203,9 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                         args.push(self.evaluate(argument)?);
                     }
 
-                    callable.call(self, &args)
+                    function.call(self, &args)
+                } else if let ExprResult::Class(class) = call {
+                    class.call(self, &[])
                 } else {
                     Err(RuntimeError::UndefinedCallable { line: paren.line })
                 }

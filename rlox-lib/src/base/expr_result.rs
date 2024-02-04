@@ -15,6 +15,7 @@ pub enum ExprResult {
     Boolean(bool),
     Function(LoxFunction),
     Class(LoxClass),
+    Instance(LoxInstance),
     #[default]
     None,
 }
@@ -40,6 +41,10 @@ impl ExprResult {
         ExprResult::Class(class)
     }
 
+    pub fn instance(instance: LoxInstance) -> Self {
+        ExprResult::Instance(instance)
+    }
+
     pub fn none() -> Self {
         ExprResult::None
     }
@@ -61,6 +66,7 @@ impl Display for ExprResult {
             ExprResult::Boolean(value) => value.to_string(),
             ExprResult::Function(function) => format!("<fn {}>", function.name.lexeme),
             ExprResult::Class(class) => class.name.lexeme.to_string(),
+            ExprResult::Instance(instance) => format!("{} instance", instance.class.name.lexeme),
             ExprResult::None => String::from("nil"),
         };
 
@@ -134,5 +140,30 @@ pub struct LoxClass {
 impl LoxClass {
     pub fn new(name: Token) -> Self {
         Self { name }
+    }
+}
+
+impl Callable for LoxClass {
+    fn arity(&self) -> usize {
+        0
+    }
+
+    fn call(
+        &self,
+        _interpreter: &Interpreter,
+        _arguments: &[ExprResult],
+    ) -> Result<ExprResult, RuntimeError> {
+        Ok(ExprResult::instance(LoxInstance::new(self.to_owned())))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LoxInstance {
+    class: LoxClass,
+}
+
+impl LoxInstance {
+    pub fn new(class: LoxClass) -> Self {
+        Self { class }
     }
 }
