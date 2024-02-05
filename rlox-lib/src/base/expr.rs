@@ -59,6 +59,10 @@ pub enum Expr {
         name: Box<Token>,
         value: Box<Expr>,
     },
+    This {
+        uuid: Uuid,
+        keyword: Box<Token>,
+    },
     Unary {
         uuid: Uuid,
         operator: Box<Token>,
@@ -137,6 +141,13 @@ impl Expr {
         }
     }
 
+    pub fn this(keyword: Token) -> Self {
+        Expr::This {
+            uuid: Uuid::new_v4(),
+            keyword: Box::new(keyword),
+        }
+    }
+
     pub fn unary(operator: Token, right: Expr) -> Self {
         Expr::Unary {
             uuid: Uuid::new_v4(),
@@ -201,6 +212,10 @@ impl ExprUuid for Expr {
                 object: _object,
                 name: _name,
                 value: _value,
+            } => uuid,
+            Expr::This {
+                uuid,
+                keyword: _keyword,
             } => uuid,
             Expr::Unary {
                 uuid,

@@ -58,7 +58,7 @@ pub struct Token {
 }
 
 impl Token {
-    fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
+    pub(crate) fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
         Token {
             token_type,
             lexeme,

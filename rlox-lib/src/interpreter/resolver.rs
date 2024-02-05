@@ -15,10 +15,17 @@ enum FunctionType {
     Method,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'a> {
     interpreter: Rc<Interpreter<'a>>,
     scopes: RefCell<Vec<HashMap<String, bool>>>,
     current_function_type: RefCell<FunctionType>,
+    current_class_type: RefCell<ClassType>,
 }
 
 impl<'a> Resolver<'a> {
@@ -27,6 +34,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: RefCell::new(Vec::new()),
             current_function_type: RefCell::new(FunctionType::None),
+            current_class_type: RefCell::new(ClassType::None),
         }
     }
 
@@ -128,12 +136,22 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 self.end_scope()
             }
             Stmt::Class { name, methods } => {
+                let enclosing_class = self.current_class_type.replace(ClassType::Class);
+
                 self.declare(name)?;
                 self.define(name);
+
+                self.begin_scope();
+                if let Some(scope) = self.scopes.borrow_mut().last_mut() {
+                    scope.insert(String::from("this"), true);
+                }
 
                 for method in methods {
                     self.resolve_function(method, FunctionType::Method)?;
                 }
+
+                self.end_scope();
+                self.current_class_type.replace(enclosing_class);
             }
             Stmt::Expression { expression } => {
                 self.resolve_expr(expression)?;
@@ -247,6 +265,16 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
             } => {
                 self.resolve_expr(value)?;
                 self.resolve_expr(object)?;
+            }
+            Expr::This {
+                uuid: _uuid,
+                keyword,
+            } => {
+                if *self.current_class_type.borrow() == ClassType::None {
+                    return Err(RuntimeError::ThisOutsideClass { line: keyword.line });
+                }
+
+                self.resolve_local(input, keyword)?;
             }
             Expr::Unary {
                 uuid: _uuid,

@@ -279,6 +279,7 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                     Err(RuntimeError::InvalidFieldAccess { line: name.line })
                 }
             }
+            Expr::This { uuid, keyword } => self.lookup_variable(keyword, uuid),
             Expr::Unary {
                 uuid: _uuid,
                 operator,

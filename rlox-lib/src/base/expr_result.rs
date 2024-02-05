@@ -1,4 +1,4 @@
-use crate::base::scanner::Token;
+use crate::base::scanner::{Token, TokenType};
 use crate::base::stmt::Stmt;
 use crate::interpreter::environment::Environment;
 use crate::interpreter::interpreter::Interpreter;
@@ -106,6 +106,21 @@ impl LoxFunction {
             closure,
         }
     }
+
+    pub fn bind(&self, instance: &LoxInstance) -> ExprResult {
+        let environment = Environment::new_enclosing(Rc::clone(&self.closure));
+        environment.borrow_mut().define(
+            &Token::new(TokenType::This, String::from("this"), 0),
+            ExprResult::instance(instance.to_owned()),
+        );
+
+        ExprResult::function(LoxFunction::new(
+            self.name.to_owned(),
+            self.params.to_owned(),
+            self.body.to_owned(),
+            environment,
+        ))
+    }
 }
 
 impl Callable for LoxFunction {
@@ -181,7 +196,7 @@ impl LoxInstance {
         if let Some(value) = self.fields.borrow().get(&name.lexeme) {
             Ok(value.to_owned())
         } else if let Some(method) = self.class.find_method(name) {
-            Ok(ExprResult::function(method.to_owned()))
+            Ok(method.bind(self))
         } else {
             Err(RuntimeError::UndefinedProperty { line: name.line })
         }

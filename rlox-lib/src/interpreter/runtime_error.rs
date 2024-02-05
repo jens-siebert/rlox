@@ -33,6 +33,8 @@ pub enum RuntimeError {
     InvalidPropertyAccess { line: usize },
     #[error("{line:?}: Only instances have fields!")]
     InvalidFieldAccess { line: usize },
+    #[error("{line:?}: Can't use 'this' outside of a class!")]
+    ThisOutsideClass { line: usize },
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

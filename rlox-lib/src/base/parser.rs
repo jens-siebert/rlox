@@ -553,6 +553,10 @@ impl Parser {
             _ => {}
         }
 
+        if self.match_token_types(&[TokenType::This])? {
+            return Ok(Expr::this(self.previous()?));
+        }
+
         if self.match_token_types(&[TokenType::Identifier])? {
             return Ok(Expr::variable(self.previous()?));
         }
