@@ -16,7 +16,7 @@ pub enum ExprResult {
     Boolean(bool),
     Function(LoxFunction),
     Class(LoxClass),
-    Instance(Rc<LoxInstance>),
+    Instance(LoxInstance),
     #[default]
     None,
 }
@@ -43,7 +43,7 @@ impl ExprResult {
     }
 
     pub fn instance(instance: LoxInstance) -> Self {
-        ExprResult::Instance(Rc::new(instance))
+        ExprResult::Instance(instance)
     }
 
     pub fn none() -> Self {
@@ -166,14 +166,14 @@ impl Callable for LoxClass {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoxInstance {
     class: LoxClass,
-    fields: RefCell<HashMap<String, ExprResult>>,
+    fields: Rc<RefCell<HashMap<String, ExprResult>>>,
 }
 
 impl LoxInstance {
     pub fn new(class: LoxClass) -> Self {
         Self {
             class,
-            fields: RefCell::new(HashMap::new()),
+            fields: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 
