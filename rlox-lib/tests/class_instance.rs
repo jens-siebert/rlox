@@ -11,7 +11,7 @@ Bagel instance
 "###;
 
 #[test]
-fn test_class_declaration() {
+fn test_class_instance() {
     assert_eq!(
         common::interpret(INPUT).unwrap(),
         RESULT.strip_prefix('\n').unwrap()

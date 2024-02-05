@@ -13,7 +13,7 @@ delicious!
 "###;
 
 #[test]
-fn test_class_declaration() {
+fn test_class_properties() {
     assert_eq!(
         common::interpret(INPUT).unwrap(),
         RESULT.strip_prefix('\n').unwrap()
