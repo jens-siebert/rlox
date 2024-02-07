@@ -35,6 +35,8 @@ pub enum RuntimeError {
     InvalidFieldAccess { line: usize },
     #[error("{line:?}: Can't use 'this' outside of a class!")]
     ThisOutsideClass { line: usize },
+    #[error("{line:?}: Can't return a value from an initializer!")]
+    ReturnValueFromInitializer { line: usize },
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

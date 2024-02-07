@@ -12,6 +12,7 @@ use std::rc::Rc;
 enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -147,7 +148,20 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 }
 
                 for method in methods {
-                    self.resolve_function(method, FunctionType::Method)?;
+                    if let Stmt::Function {
+                        name,
+                        params: _params,
+                        body: _body,
+                    } = method
+                    {
+                        let declaration = if name.lexeme.eq("init") {
+                            FunctionType::Initializer
+                        } else {
+                            FunctionType::Method
+                        };
+
+                        self.resolve_function(method, declaration)?;
+                    }
                 }
 
                 self.end_scope();
@@ -185,6 +199,12 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 }
 
                 if let Some(expr) = value.as_ref() {
+                    if *self.current_function_type.borrow() == FunctionType::Initializer {
+                        return Err(RuntimeError::ReturnValueFromInitializer {
+                            line: keyword.line,
+                        });
+                    }
+
                     self.resolve_expr(expr)?;
                 }
             }
