@@ -211,10 +211,10 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                         });
                     }
 
-                    let mut args = vec![];
-                    for argument in arguments {
-                        args.push(self.evaluate(argument)?);
-                    }
+                    let args = arguments
+                        .iter()
+                        .map(|argument| self.evaluate(argument))
+                        .collect::<Result<Vec<_>, _>>()?;
 
                     function.call(self, &args)
                 } else if let ExprResult::Class(class) = call {
@@ -318,19 +318,23 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     .borrow_mut()
                     .define(name, ExprResult::none());
 
-                let mut functions = HashMap::new();
-                for method in methods {
-                    if let Stmt::Function { name, params, body } = method {
-                        let function = LoxFunction::new(
-                            *name.to_owned(),
-                            params.to_owned(),
-                            body.to_owned(),
-                            Rc::clone(&self.environment),
-                        );
+                let functions = methods
+                    .iter()
+                    .filter_map(|method| {
+                        if let Stmt::Function { name, params, body } = method {
+                            let function = LoxFunction::new(
+                                *name.to_owned(),
+                                params.to_owned(),
+                                body.to_owned(),
+                                Rc::clone(&self.environment),
+                            );
 
-                        functions.insert(name.lexeme.to_owned(), function);
-                    }
-                }
+                            Some((name.lexeme.to_owned(), function))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
 
                 let class = LoxClass::new(*name.to_owned(), functions);
 
