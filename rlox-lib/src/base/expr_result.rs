@@ -1,4 +1,4 @@
-use crate::base::scanner::{Token, TokenType};
+use crate::base::scanner::Token;
 use crate::base::stmt::Stmt;
 use crate::interpreter::environment::Environment;
 use crate::interpreter::interpreter::Interpreter;
@@ -109,10 +109,9 @@ impl LoxFunction {
 
     pub fn bind(&self, instance: &LoxInstance) -> ExprResult {
         let environment = Environment::new_enclosing(Rc::clone(&self.closure));
-        environment.borrow_mut().define(
-            &Token::new(TokenType::This, String::from("this"), 0),
-            ExprResult::instance(instance.to_owned()),
-        );
+        environment
+            .borrow_mut()
+            .define("this", ExprResult::instance(instance.to_owned()));
 
         ExprResult::function(LoxFunction::new(
             self.name.to_owned(),
@@ -159,8 +158,8 @@ impl LoxClass {
         Self { name, methods }
     }
 
-    pub fn find_method(&self, name: &Token) -> Option<&LoxFunction> {
-        self.methods.get(&name.lexeme)
+    pub fn find_method(&self, name: &str) -> Option<&LoxFunction> {
+        self.methods.get(&name.to_string())
     }
 }
 
@@ -195,7 +194,7 @@ impl LoxInstance {
     pub fn get(&self, name: &Token) -> Result<ExprResult, RuntimeError> {
         if let Some(value) = self.fields.borrow().get(&name.lexeme) {
             Ok(value.to_owned())
-        } else if let Some(method) = self.class.find_method(name) {
+        } else if let Some(method) = self.class.find_method(&name.lexeme) {
             Ok(method.bind(self))
         } else {
             Err(RuntimeError::UndefinedProperty { line: name.line })

@@ -66,7 +66,7 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn define(&self, name: &Token, value: ExprResult) {
-        self.environment.borrow_mut().define(name, value);
+        self.environment.borrow_mut().define(&name.lexeme, value);
     }
 
     pub fn resolve(&self, uuid: &Uuid, depth: usize) {
@@ -316,7 +316,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
             Stmt::Class { name, methods } => {
                 self.environment
                     .borrow_mut()
-                    .define(name, ExprResult::none());
+                    .define(&name.lexeme, ExprResult::none());
 
                 let functions = methods
                     .iter()
@@ -348,7 +348,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
             Stmt::Function { name, params, body } => {
                 self.environment
                     .borrow_mut()
-                    .define(name, ExprResult::none());
+                    .define(&name.lexeme, ExprResult::none());
 
                 let function = LoxFunction::new(
                     *name.to_owned(),
@@ -391,7 +391,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
             }
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate(initializer)?;
-                self.environment.borrow_mut().define(name, value);
+                self.environment.borrow_mut().define(&name.lexeme, value);
             }
             Stmt::While { condition, body } => {
                 while self.evaluate(condition)?.is_truthy() {
