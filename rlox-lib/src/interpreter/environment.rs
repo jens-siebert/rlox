@@ -45,28 +45,20 @@ impl Environment {
         })
     }
 
-    pub fn get_at(&self, distance: usize, name: &Token) -> Result<ExprResult, RuntimeError> {
+    pub fn get_at(&self, distance: usize, name: &str) -> Option<ExprResult> {
         self.get_at_helper(distance, 0, name)
     }
 
-    fn get_at_helper(
-        &self,
-        distance: usize,
-        index: usize,
-        name: &Token,
-    ) -> Result<ExprResult, RuntimeError> {
+    fn get_at_helper(&self, distance: usize, index: usize, name: &str) -> Option<ExprResult> {
         if index < distance {
             if let Some(enclosing) = &self.enclosing {
                 return enclosing.borrow().get_at_helper(distance, index + 1, name);
             }
-        } else if let Some(value) = self.values.get(&name.lexeme) {
-            return Ok(value.to_owned());
+        } else if let Some(value) = self.values.get(name) {
+            return Some(value.to_owned());
         }
 
-        Err(RuntimeError::UndefinedVariable {
-            line: name.line,
-            name: name.lexeme.to_owned(),
-        })
+        None
     }
 
     pub fn assign(&mut self, name: &Token, value: &ExprResult) -> Result<(), RuntimeError> {
@@ -86,38 +78,20 @@ impl Environment {
         })
     }
 
-    pub fn assign_at(
-        &mut self,
-        distance: usize,
-        name: &Token,
-        value: &ExprResult,
-    ) -> Result<(), RuntimeError> {
+    pub fn assign_at(&mut self, distance: usize, name: &str, value: &ExprResult) {
         self.assign_at_helper(distance, 0, name, value)
     }
 
-    fn assign_at_helper(
-        &mut self,
-        distance: usize,
-        index: usize,
-        name: &Token,
-        value: &ExprResult,
-    ) -> Result<(), RuntimeError> {
+    fn assign_at_helper(&mut self, distance: usize, index: usize, name: &str, value: &ExprResult) {
         if index < distance {
             if let Some(enclosing) = &self.enclosing {
                 return enclosing
                     .borrow_mut()
                     .assign_at_helper(distance, index + 1, name, value);
             }
-        } else if self.values.contains_key(&name.lexeme) {
-            self.values.insert(name.lexeme.to_owned(), value.to_owned());
-
-            return Ok(());
+        } else if self.values.contains_key(name) {
+            self.values.insert(name.to_owned(), value.to_owned());
         }
-
-        Err(RuntimeError::UndefinedVariable {
-            line: name.line,
-            name: name.lexeme.to_owned(),
-        })
     }
 }
 

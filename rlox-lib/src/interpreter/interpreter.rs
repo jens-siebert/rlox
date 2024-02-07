@@ -52,17 +52,12 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    pub fn execute_block(&self, statements: &[Stmt]) -> Result<ExprResult, RuntimeError> {
+    pub fn execute_block(&self, statements: &[Stmt]) -> Result<(), RuntimeError> {
         for statement in statements {
-            if let Err(e) = self.execute(statement) {
-                return match e {
-                    RuntimeError::Return { ret_val } => Ok(ret_val),
-                    _ => Err(e),
-                };
-            }
+            self.execute(statement)?;
         }
 
-        Ok(ExprResult::none())
+        Ok(())
     }
 
     pub fn define(&self, name: &Token, value: ExprResult) {
@@ -83,7 +78,13 @@ impl<'a> Interpreter<'a> {
 
     fn lookup_variable(&self, name: &Token, uuid: &Uuid) -> Result<ExprResult, RuntimeError> {
         if let Some(distance) = self.locals.borrow().get(uuid) {
-            self.environment.borrow().get_at(distance.to_owned(), name)
+            self.environment
+                .borrow()
+                .get_at(distance.to_owned(), &name.lexeme)
+                .ok_or(RuntimeError::UndefinedVariable {
+                    line: name.line,
+                    name: name.lexeme.to_owned(),
+                })
         } else {
             self.globals.borrow().get(name)
         }
@@ -105,7 +106,7 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                 if let Some(distance) = self.locals.borrow().get(uuid) {
                     self.environment
                         .borrow_mut()
-                        .assign_at(distance.to_owned(), name, &v)?;
+                        .assign_at(distance.to_owned(), &name.lexeme, &v);
                 } else {
                     self.globals.borrow_mut().assign(name, &v)?;
                 }
@@ -327,6 +328,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                                 params.to_owned(),
                                 body.to_owned(),
                                 Rc::clone(&self.environment),
+                                name.lexeme.eq("this"),
                             );
 
                             Some((name.lexeme.to_owned(), function))
@@ -355,6 +357,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     params.to_owned(),
                     body.to_owned(),
                     Rc::clone(&self.environment),
+                    false,
                 );
 
                 self.environment

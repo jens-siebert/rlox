@@ -90,6 +90,7 @@ pub struct LoxFunction {
     params: Vec<Token>,
     body: Vec<Stmt>,
     closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
@@ -98,17 +99,20 @@ impl LoxFunction {
         params: Vec<Token>,
         body: Vec<Stmt>,
         closure: Rc<RefCell<Environment>>,
+        is_initializer: bool,
     ) -> Self {
         Self {
             name,
             params,
             body,
             closure,
+            is_initializer,
         }
     }
 
     pub fn bind(&self, instance: &LoxInstance) -> ExprResult {
         let environment = Environment::new_enclosing(Rc::clone(&self.closure));
+
         environment
             .borrow_mut()
             .define("this", ExprResult::instance(instance.to_owned()));
@@ -118,6 +122,7 @@ impl LoxFunction {
             self.params.to_owned(),
             self.body.to_owned(),
             environment,
+            self.is_initializer,
         ))
     }
 }
@@ -143,7 +148,20 @@ impl Callable for LoxFunction {
             }
         }
 
-        scoped_interpreter.execute_block(&self.body)
+        if let Err(e) = scoped_interpreter.execute_block(&self.body) {
+            return match e {
+                RuntimeError::Return { ret_val } => {
+                    if self.is_initializer {
+                        Ok(self.closure.borrow().get_at(0, "this").unwrap())
+                    } else {
+                        Ok(ret_val)
+                    }
+                }
+                _ => Err(e),
+            };
+        }
+
+        Ok(ExprResult::None)
     }
 }
 
@@ -165,15 +183,27 @@ impl LoxClass {
 
 impl Callable for LoxClass {
     fn arity(&self) -> usize {
-        0
+        if let Some(initializer) = self.find_method("init") {
+            initializer.arity()
+        } else {
+            0
+        }
     }
 
     fn call(
         &self,
-        _interpreter: &Interpreter,
-        _arguments: &[ExprResult],
+        interpreter: &Interpreter,
+        arguments: &[ExprResult],
     ) -> Result<ExprResult, RuntimeError> {
-        Ok(ExprResult::instance(LoxInstance::new(self.to_owned())))
+        let instance = LoxInstance::new(self.to_owned());
+
+        if let Some(initializer) = self.find_method("init") {
+            if let ExprResult::Function(function) = initializer.bind(&instance) {
+                function.call(interpreter, arguments)?;
+            }
+        }
+
+        Ok(ExprResult::instance(instance))
     }
 }
 
