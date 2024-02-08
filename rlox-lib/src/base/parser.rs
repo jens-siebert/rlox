@@ -54,6 +54,8 @@ pub enum ParserError {
     MissingParameterName { line: usize },
     #[error("{line:?}: Expect property name after '.'.")]
     MissingPropertyName { line: usize },
+    #[error("{line:?}: Expect superclass name.")]
+    MissingSuperclassName { line: usize },
     #[error("{line:?}: Invalid assignment target.")]
     InvalidAssignmentTarget { line: usize },
 }
@@ -100,6 +102,19 @@ impl Parser {
             },
         )?;
 
+        let superclass = if self.match_token_types(&[TokenType::Less])? {
+            self.consume(
+                TokenType::Identifier,
+                ParserError::MissingSuperclassName {
+                    line: self.peek().unwrap().line,
+                },
+            )?;
+
+            Some(Expr::variable(self.previous()?))
+        } else {
+            None
+        };
+
         self.consume(
             TokenType::LeftBrace,
             ParserError::MissingLeftBraceBeforeClassBody {
@@ -119,7 +134,7 @@ impl Parser {
             },
         )?;
 
-        Ok(Stmt::class(name, methods))
+        Ok(Stmt::class(name, superclass, methods))
     }
 
     fn function(&self) -> Result<Stmt, ParserError> {

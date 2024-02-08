@@ -9,6 +9,7 @@ pub enum Stmt {
     },
     Class {
         name: Box<Token>,
+        superclass: Box<Option<Expr>>,
         methods: Vec<Stmt>,
     },
     Expression {
@@ -46,9 +47,10 @@ impl Stmt {
         Stmt::Block { statements }
     }
 
-    pub fn class(name: Token, methods: Vec<Stmt>) -> Self {
+    pub fn class(name: Token, superclass: Option<Expr>, methods: Vec<Stmt>) -> Self {
         Stmt::Class {
             name: Box::new(name),
+            superclass: Box::new(superclass),
             methods,
         }
     }

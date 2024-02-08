@@ -136,11 +136,31 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 self.resolve_stmts(statements)?;
                 self.end_scope()
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
                 let enclosing_class = self.current_class_type.replace(ClassType::Class);
 
                 self.declare(name)?;
                 self.define(name);
+
+                if let Some(sc) = superclass.as_ref() {
+                    if let Expr::Variable {
+                        uuid: _uuid,
+                        name: sc_name,
+                    } = sc
+                    {
+                        if name.lexeme == sc_name.lexeme {
+                            return Err(RuntimeError::SuperclassSelfInheritance {
+                                line: name.line,
+                            });
+                        }
+                    }
+
+                    self.resolve_expr(sc)?;
+                }
 
                 self.begin_scope();
                 if let Some(scope) = self.scopes.borrow_mut().last_mut() {

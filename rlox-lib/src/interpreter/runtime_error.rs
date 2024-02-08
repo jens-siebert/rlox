@@ -37,6 +37,10 @@ pub enum RuntimeError {
     ThisOutsideClass { line: usize },
     #[error("{line:?}: Can't return a value from an initializer!")]
     ReturnValueFromInitializer { line: usize },
+    #[error("{line:?}: A class can't inherit from itself!")]
+    SuperclassSelfInheritance { line: usize },
+    #[error("{line:?}: Superclass must be a class!")]
+    SuperclassInvalidType { line: usize },
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

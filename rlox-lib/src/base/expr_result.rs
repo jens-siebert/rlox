@@ -168,16 +168,29 @@ impl Callable for LoxFunction {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoxClass {
     name: Token,
+    superclass: Box<Option<LoxClass>>,
     methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: Token, methods: HashMap<String, LoxFunction>) -> Self {
-        Self { name, methods }
+    pub fn new(
+        name: Token,
+        superclass: Option<LoxClass>,
+        methods: HashMap<String, LoxFunction>,
+    ) -> Self {
+        Self {
+            name,
+            superclass: Box::new(superclass),
+            methods,
+        }
     }
 
     pub fn find_method(&self, name: &str) -> Option<&LoxFunction> {
-        self.methods.get(&name.to_string())
+        if let Some(sc) = self.superclass.as_ref() {
+            sc.find_method(name)
+        } else {
+            self.methods.get(&name.to_string())
+        }
     }
 }
 

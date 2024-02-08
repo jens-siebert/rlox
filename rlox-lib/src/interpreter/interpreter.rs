@@ -314,7 +314,21 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     self.fork(Environment::new_enclosing(Rc::clone(&self.environment)));
                 scoped_interpreter.execute_block(statements)?;
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
+                let class_superclass = if let Some(sc) = superclass.as_ref() {
+                    if let ExprResult::Class(c) = self.evaluate(sc)? {
+                        Some(c)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, ExprResult::none());
@@ -338,7 +352,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     })
                     .collect();
 
-                let class = LoxClass::new(*name.to_owned(), functions);
+                let class = LoxClass::new(*name.to_owned(), class_superclass, functions);
 
                 self.environment
                     .borrow_mut()
