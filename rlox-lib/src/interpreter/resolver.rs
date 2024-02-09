@@ -20,6 +20,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 pub struct Resolver<'a> {
@@ -147,6 +148,8 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                 self.define(name);
 
                 if let Some(sc) = superclass.as_ref() {
+                    self.current_class_type.replace(ClassType::Subclass);
+
                     if let Expr::Variable {
                         uuid: _uuid,
                         name: sc_name,
@@ -160,6 +163,11 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
                     }
 
                     self.resolve_expr(sc)?;
+
+                    self.begin_scope();
+                    if let Some(scope) = self.scopes.borrow_mut().last_mut() {
+                        scope.insert(String::from("super"), true);
+                    }
                 }
 
                 self.begin_scope();
@@ -182,6 +190,10 @@ impl Visitor<Stmt, (), RuntimeError> for Resolver<'_> {
 
                         self.resolve_function(method, declaration)?;
                     }
+                }
+
+                if superclass.is_some() {
+                    self.end_scope();
                 }
 
                 self.end_scope();
@@ -305,6 +317,19 @@ impl Visitor<Expr, (), RuntimeError> for Resolver<'_> {
             } => {
                 self.resolve_expr(value)?;
                 self.resolve_expr(object)?;
+            }
+            Expr::Super {
+                uuid: _uuid,
+                keyword,
+                method: _method,
+            } => {
+                if *self.current_class_type.borrow() == ClassType::None {
+                    return Err(RuntimeError::SuperOutsideClass { line: keyword.line });
+                } else if *self.current_class_type.borrow() != ClassType::Subclass {
+                    return Err(RuntimeError::SuperWithoutSuperclass { line: keyword.line });
+                }
+
+                self.resolve_local(input, keyword)?;
             }
             Expr::This {
                 uuid: _uuid,

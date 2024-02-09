@@ -280,6 +280,26 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                     Err(RuntimeError::InvalidFieldAccess { line: name.line })
                 }
             }
+            Expr::Super {
+                uuid,
+                keyword,
+                method,
+            } => {
+                if let Some(distance) = self.locals.borrow().get(uuid) {
+                    let superclass = self.environment.borrow().get_at(*distance, "super");
+                    let object = self.environment.borrow().get_at(*distance - 1, "this");
+
+                    if let Some(ExprResult::Class(sc)) = superclass {
+                        if let Some(ExprResult::Instance(obj)) = object {
+                            if let Some(method) = sc.find_method(&method.lexeme) {
+                                return Ok(method.bind(&obj));
+                            }
+                        }
+                    }
+                }
+
+                Err(RuntimeError::UndefinedProperty { line: keyword.line })
+            }
             Expr::This { uuid, keyword } => self.lookup_variable(keyword, uuid),
             Expr::Unary {
                 uuid: _uuid,
@@ -319,12 +339,8 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                 superclass,
                 methods,
             } => {
-                let class_superclass = if let Some(sc) = superclass.as_ref() {
-                    if let ExprResult::Class(c) = self.evaluate(sc)? {
-                        Some(c)
-                    } else {
-                        None
-                    }
+                let sc_result = if let Some(sc) = superclass.as_ref() {
+                    Some(self.evaluate(sc)?)
                 } else {
                     None
                 };
@@ -332,6 +348,15 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                 self.environment
                     .borrow_mut()
                     .define(&name.lexeme, ExprResult::none());
+
+                let enclosing_environment = if let Some(sc) = sc_result.to_owned() {
+                    let env = Environment::new_enclosing(Rc::clone(&self.environment));
+                    env.borrow_mut().define("super", sc);
+
+                    env
+                } else {
+                    Rc::clone(&self.environment)
+                };
 
                 let functions = methods
                     .iter()
@@ -341,7 +366,7 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                                 *name.to_owned(),
                                 params.to_owned(),
                                 body.to_owned(),
-                                Rc::clone(&self.environment),
+                                Rc::clone(&enclosing_environment),
                                 name.lexeme.eq("this"),
                             );
 
@@ -352,7 +377,17 @@ impl Visitor<Stmt, (), RuntimeError> for Interpreter<'_> {
                     })
                     .collect();
 
-                let class = LoxClass::new(*name.to_owned(), class_superclass, functions);
+                let lox_superclass = if let Some(sc) = sc_result.to_owned() {
+                    if let ExprResult::Class(c) = sc {
+                        Some(c)
+                    } else {
+                        return Err(RuntimeError::SuperclassInvalidType { line: name.line });
+                    }
+                } else {
+                    None
+                };
+
+                let class = LoxClass::new(*name.to_owned(), lox_superclass, functions);
 
                 self.environment
                     .borrow_mut()

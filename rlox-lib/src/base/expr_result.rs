@@ -186,10 +186,12 @@ impl LoxClass {
     }
 
     pub fn find_method(&self, name: &str) -> Option<&LoxFunction> {
-        if let Some(sc) = self.superclass.as_ref() {
+        if self.methods.contains_key(name) {
+            self.methods.get(&name.to_string())
+        } else if let Some(sc) = self.superclass.as_ref() {
             sc.find_method(name)
         } else {
-            self.methods.get(&name.to_string())
+            None
         }
     }
 }

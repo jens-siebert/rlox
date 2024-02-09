@@ -56,6 +56,10 @@ pub enum ParserError {
     MissingPropertyName { line: usize },
     #[error("{line:?}: Expect superclass name.")]
     MissingSuperclassName { line: usize },
+    #[error("{line:?}: Expect '.' after 'super'.")]
+    MissingDotAfterSuper { line: usize },
+    #[error("{line:?}: Expect superclass method name.")]
+    MissingSuperclassMethodName { line: usize },
     #[error("{line:?}: Invalid assignment target.")]
     InvalidAssignmentTarget { line: usize },
 }
@@ -566,6 +570,24 @@ impl Parser {
                 return Ok(Expr::literal(LiteralValue::String(value.clone())));
             }
             _ => {}
+        }
+
+        if self.match_token_types(&[TokenType::Super])? {
+            let keyword = self.previous()?;
+            self.consume(
+                TokenType::Dot,
+                ParserError::MissingDotAfterSuper {
+                    line: self.peek().unwrap().line,
+                },
+            )?;
+            let method = self.consume(
+                TokenType::Identifier,
+                ParserError::MissingSuperclassMethodName {
+                    line: self.peek().unwrap().line,
+                },
+            )?;
+
+            return Ok(Expr::super_expr(keyword, method));
         }
 
         if self.match_token_types(&[TokenType::This])? {

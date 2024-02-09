@@ -41,6 +41,10 @@ pub enum RuntimeError {
     SuperclassSelfInheritance { line: usize },
     #[error("{line:?}: Superclass must be a class!")]
     SuperclassInvalidType { line: usize },
+    #[error("{line:?}: Can't use 'super' outside of a class!")]
+    SuperOutsideClass { line: usize },
+    #[error("{line:?}: Can't use 'super' in a class with no superclass!")]
+    SuperWithoutSuperclass { line: usize },
     #[error(transparent)]
     Return { ret_val: ExprResult },
 }

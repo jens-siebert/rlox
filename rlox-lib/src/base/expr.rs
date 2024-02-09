@@ -59,6 +59,11 @@ pub enum Expr {
         name: Box<Token>,
         value: Box<Expr>,
     },
+    Super {
+        uuid: Uuid,
+        keyword: Box<Token>,
+        method: Box<Token>,
+    },
     This {
         uuid: Uuid,
         keyword: Box<Token>,
@@ -141,6 +146,14 @@ impl Expr {
         }
     }
 
+    pub fn super_expr(keyword: Token, method: Token) -> Self {
+        Expr::Super {
+            uuid: Uuid::new_v4(),
+            keyword: Box::new(keyword),
+            method: Box::new(method),
+        }
+    }
+
     pub fn this(keyword: Token) -> Self {
         Expr::This {
             uuid: Uuid::new_v4(),
@@ -212,6 +225,11 @@ impl ExprUuid for Expr {
                 object: _object,
                 name: _name,
                 value: _value,
+            } => uuid,
+            Expr::Super {
+                uuid,
+                keyword: _keyword,
+                method: _method,
             } => uuid,
             Expr::This {
                 uuid,
