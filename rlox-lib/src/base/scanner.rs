@@ -86,7 +86,7 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    pub fn new(input: String) -> Self {
+    pub fn new(input: &str) -> Self {
         Scanner {
             source: input.chars().collect(),
             tokens: vec![],

@@ -9,7 +9,7 @@ pub fn interpret(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     let buf = Rc::new(RefCell::new(Vec::new()));
     let interpreter = Rc::new(Interpreter::new(Rc::clone(&buf)));
 
-    let mut scanner = Scanner::new(input.to_string());
+    let mut scanner = Scanner::new(input);
     let tokens = scanner.scan_tokens()?;
 
     let parser = Parser::new(tokens);
