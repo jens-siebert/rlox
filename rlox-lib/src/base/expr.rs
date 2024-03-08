@@ -1,6 +1,5 @@
 use crate::base::scanner::Token;
 use crate::base::visitor::Visitor;
-use ordered_float::OrderedFloat;
 use uuid::Uuid;
 
 pub trait ExprUuid {
@@ -9,7 +8,7 @@ pub trait ExprUuid {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralValue {
-    Number(OrderedFloat<f64>),
+    Number(f64),
     String(String),
     Boolean(bool),
     None,

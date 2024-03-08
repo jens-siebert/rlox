@@ -241,7 +241,7 @@ impl Visitor<Expr, ExprResult, RuntimeError> for Interpreter<'_> {
                 expression,
             } => self.evaluate(expression),
             Expr::Literal { uuid: _uuid, value } => match value {
-                LiteralValue::Number(value) => Ok(ExprResult::number(value.into_inner())),
+                LiteralValue::Number(value) => Ok(ExprResult::number(value.to_owned())),
                 LiteralValue::String(value) => Ok(ExprResult::string(value.clone())),
                 LiteralValue::Boolean(value) => Ok(ExprResult::boolean(*value)),
                 LiteralValue::None => Ok(ExprResult::none()),

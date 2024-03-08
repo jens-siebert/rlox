@@ -1,4 +1,3 @@
-use ordered_float::OrderedFloat;
 use std::str::FromStr;
 
 use thiserror::Error;
@@ -28,7 +27,7 @@ pub enum TokenType {
 
     Identifier,
     String { value: String },
-    Number { value: OrderedFloat<f64> },
+    Number { value: f64 },
 
     And,
     Class,
@@ -219,7 +218,7 @@ impl Scanner {
             .collect();
         self.tokens.push(Token::new(
             TokenType::Number {
-                value: OrderedFloat(value),
+                value,
             },
             token_string,
             self.current_line,
