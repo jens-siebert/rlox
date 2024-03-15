@@ -1,14 +1,12 @@
-use std::cell::RefCell;
-use std::fs::File;
-use std::io::{stdout, BufRead, BufReader, Write};
-use std::rc::Rc;
-
 use clap::Parser as ClapParser;
-
 use rlox_lib::base::parser::Parser;
 use rlox_lib::base::scanner::Scanner;
 use rlox_lib::interpreter::interpreter::Interpreter;
 use rlox_lib::interpreter::resolver::Resolver;
+use std::cell::RefCell;
+use std::fs;
+use std::io::{stdout, Write};
+use std::rc::Rc;
 
 struct LoxRuntime<'a> {
     interpreter: Rc<Interpreter<'a>>,
@@ -63,16 +61,8 @@ impl LoxRuntime<'_> {
     }
 
     fn run_file(&self, script_file: String) -> Result<(), Box<dyn std::error::Error>> {
-        let file = File::open(script_file).expect("Unable to read input file");
-        let buffer = BufReader::new(file);
-
-        for line in buffer.lines().map_while(Result::ok) {
-            if let Err(error) = self.run(line.as_str()) {
-                eprintln!("{}", error)
-            }
-        }
-
-        Ok(())
+        let script_content = fs::read_to_string(script_file).expect("Unable to read input file");
+        self.run(script_content.as_str())
     }
 }
 
