@@ -9,5 +9,5 @@ edition = "2021"
 name = "rlox"
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5.4", features = ["derive"] }
 rlox-lib = { path = "../rlox-lib" }
