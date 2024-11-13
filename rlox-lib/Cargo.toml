@@ -6,5 +6,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-thiserror = "1.0.59"
+thiserror = "2.0.0"
 uuid = { version = "1.8", features = ["v4", "fast-rng"]}
